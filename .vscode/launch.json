@@ -10,7 +10,7 @@
             "request": "launch",
             "runtimeArgs": [
                 "run",
-                "start"
+                "dev"
             ],
             "runtimeExecutable": "npm",
             "console": "internalConsole",
