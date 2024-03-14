@@ -1,9 +1,11 @@
-import express from "express";
+import express from 'express';
 
-import UserRoutes from "./user";
+import authentication from '../middleware/authentication';
+import UserRoutes from './user';
 
 const ApiRoutes = express.Router();
 
-ApiRoutes.use("/user", UserRoutes);
+ApiRoutes.use(authentication);
+ApiRoutes.use('/user', UserRoutes);
 
 export default ApiRoutes;
