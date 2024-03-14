@@ -1,21 +1,23 @@
-import express, { Request, Response } from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-import ApiRoutes from "./routes/api";
+import ApiRoutes from './routes/api';
+import { validateEnv } from './utils';
 
 const app = express();
 app.use(express.json());
 
-app.use("/api", ApiRoutes);
+app.use('/api', ApiRoutes);
 
 const main = async () => {
   const db = await mongoose.connect(process.env.DATABASE_URL!);
-  console.log("Connected to MongoDB");
+  console.log('Connected to MongoDB');
 };
 
 if (require.main === module) {
   dotenv.config();
+  validateEnv();
   main();
 
   app.listen(3000, () => {
