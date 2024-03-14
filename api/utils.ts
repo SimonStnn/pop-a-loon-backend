@@ -8,4 +8,9 @@ export const validateEnv = () => {
     console.error('No secret key provided');
     process.exit(1);
   }
+
+  if (!process.env.JWT_EXPIRATION) {
+    console.error('No token expiration provided');
+    process.exit(1);
+  }
 };
