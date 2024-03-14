@@ -1,10 +1,13 @@
-import express, { Request, Response } from "express";
-import User from "../schemas/user";
-import Count from "../schemas/count";
+import express, { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+
+import User from '../schemas/user';
+import Count from '../schemas/count';
+import { JWTSignature } from '../const';
 
 const router = express.Router();
 
-router.get("/:id", async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
 
@@ -12,10 +15,10 @@ router.get("/:id", async (req: Request, res: Response) => {
     const count = await Count.findById(id);
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: 'User not found' });
       return;
     } else if (!count) {
-      res.status(404).json({ error: "Count not found" });
+      res.status(404).json({ error: 'Count not found' });
       return;
     }
 
@@ -32,14 +35,14 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:id/count", async (req: Request, res: Response) => {
+router.get('/:id/count', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
 
     const user = await Count.findById(id);
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: 'User not found' });
       return;
     }
 
@@ -53,14 +56,14 @@ router.get("/:id/count", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/count/increment", async (req: Request, res: Response) => {
+router.post('/:id/count/increment', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
 
     const user = await Count.findById(id);
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: 'User not found' });
       return;
     }
 
@@ -77,7 +80,7 @@ router.post("/:id/count/increment", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/new", async (req: Request, res: Response) => {
+router.post('/new', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.query;
 
@@ -86,11 +89,12 @@ router.post("/new", async (req: Request, res: Response) => {
     const count = await Count.findById(user.id);
 
     if (!count) {
-      throw new Error("Something went wrong");
+      throw new Error('Something went wrong');
     }
 
     res.json({
       id: user.id,
+      token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
       username: user.username,
       email: user.email,
       count: count.count,
@@ -102,7 +106,7 @@ router.post("/new", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:id", async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
     const { username, email, password } = req.query;
@@ -115,10 +119,10 @@ router.put("/:id", async (req: Request, res: Response) => {
     const count = await Count.findById(id);
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: 'User not found' });
       return;
     } else if (!count) {
-      res.status(404).json({ error: "Count not found" });
+      res.status(404).json({ error: 'Count not found' });
       return;
     }
 
