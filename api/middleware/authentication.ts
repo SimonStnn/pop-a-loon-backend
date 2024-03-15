@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+import { JWTSignature } from '@/const';
 
 // Middleware function to authenticate user
 export default (req: Request, res: Response, next: NextFunction) => {
@@ -16,6 +17,8 @@ export default (req: Request, res: Response, next: NextFunction) => {
     if (err) {
       return res.status(403).json({ message: 'Failed to authenticate token' });
     }
+
+    req.jwt = decoded as JWTSignature;
 
     // Move to the next middleware or route handler
     next();
