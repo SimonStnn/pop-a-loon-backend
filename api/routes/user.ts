@@ -115,6 +115,11 @@ router.put('/:id', async (req: Request, res: Response) => {
     const id = req.params.id;
     const { username, email, password } = req.query;
 
+    if (id !== req.jwt?.id) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
     const user = await User.findByIdAndUpdate(
       id,
       { username, email, password },
