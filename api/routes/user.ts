@@ -59,11 +59,15 @@ router.get('/:id/count', async (req: Request, res: Response) => {
 router.post('/:id/count/increment', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
-
     const user = await Count.findById(id);
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (id !== req.jwt?.id) {
+      res.status(403).json({ error: 'Forbidden' });
       return;
     }
 
