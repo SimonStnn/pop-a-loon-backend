@@ -7,6 +7,12 @@ export default (req: Request, res: Response, next: NextFunction) => {
   // Extract JWT token from request headers
   const token = req.headers.authorization;
 
+  // If path is /new, move to the next middleware or route handler
+  if (req.path === '/user/new') {
+    next();
+    return;
+  }
+
   // Check if token is provided
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
