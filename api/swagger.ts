@@ -10,3 +10,32 @@ export const swaggerOptions: swaggerJsdoc.Options = {
   },
   apis: ['./api/**/*.ts'],
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: The user's id
+ *         username:
+ *           type: string
+ *           description: The user's username
+ *         count:
+ *           type: int
+ *           description: The user's count
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the user was last updated
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the user was created
+ *       required:
+ *         - id
+ *         - username
+ *         - updatedAt
+ */
