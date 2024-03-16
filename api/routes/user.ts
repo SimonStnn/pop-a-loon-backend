@@ -8,6 +8,24 @@ import { formatUser } from '../utils';
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * /api/user/{id}:
+ *   get:
+ *     summary: Get a user by id
+ *     responses:
+ *       200:
+ *         description: The created user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: Not found
+ *       500:
+ *         description: Internal server error
+ *
+ */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
@@ -50,6 +68,37 @@ router.get('/:id/count', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/user/{id}/count/increment:
+ *   post:
+ *     summary: Increment the count of a user
+ *     responses:
+ *       200:
+ *         description:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   description: The user's id
+ *                 count:
+ *                   type: int
+ *                   description: The user's count
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: The date the user was last updated
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Not found
+ *       500:
+ *         description: Internal server error
+ *
+ */
 router.post('/:id/count/increment', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
@@ -81,6 +130,50 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/user/new:
+ *   post:
+ *     summary: Create a new user
+ *     parameters:
+ *      - in: query
+ *        name: username
+ *        required: true
+ *        schema:
+ *          type: string
+ *          description: The username of the user
+ *      - in: query
+ *        name: email
+ *        required: true
+ *        schema:
+ *          type: string
+ *          description: The email of the user
+ *      - in: query
+ *        name: password
+ *        required: true
+ *        schema:
+ *          type: string
+ *          description: The password of the user
+ *     responses:
+ *       200:
+ *         description: The created user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: The user's token
+ *                       required: false
+ *                 - $ref: '#/components/schemas/User'
+ *       400:
+ *         description: User already exists
+ *       500:
+ *         description: Internal server error
+ *
+ */
 router.post('/new', async (req: Request, res: Response) => {
   try {
     const { username, email, password, initialCount } = req.query;
@@ -122,6 +215,45 @@ router.post('/new', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/user/{id}:
+ *   put:
+ *     summary: Update a user by id
+ *     parameters:
+ *       - in: query
+ *         name: username
+ *         required: false
+ *         schema:
+ *           type: string
+ *           description: The username of the user
+ *       - in: query
+ *         name: email
+ *         required: false
+ *         schema:
+ *           type: string
+ *           description: The email of the user
+ *       - in: query
+ *         name: password
+ *         required: false
+ *         schema:
+ *           type: string
+ *           description: The password of the user
+ *     responses:
+ *       200:
+ *         description: The created user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Not found
+ *       500:
+ *         description: Internal server error
+ *
+ */
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
