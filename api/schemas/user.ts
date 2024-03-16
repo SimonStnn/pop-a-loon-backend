@@ -8,7 +8,6 @@ export type User = {
   username: string;
   email: string;
   password: string;
-  createdAt?: Date;
   updatedAt?: Date;
 };
 
@@ -24,11 +23,6 @@ export const schema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    immutable: true,
   },
   updatedAt: {
     type: Date,
