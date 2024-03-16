@@ -14,15 +14,12 @@ export type User = {
 export const schema = new mongoose.Schema({
   username: {
     type: String,
-    required: true,
   },
   email: {
     type: String,
-    required: true,
   },
   password: {
     type: String,
-    required: true,
   },
   updatedAt: {
     type: Date,
@@ -42,5 +39,4 @@ schema.pre('save', function (next) {
 });
 
 export const model = mongoose.model<User>(name, schema);
-
 export default model;
