@@ -23,5 +23,5 @@ schema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
-
-export default mongoose.model(name, schema);
+const model = mongoose.model(name, schema);
+export default model;
