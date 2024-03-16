@@ -6,6 +6,13 @@ import Count from '../schemas/count';
 import { JWTSignature } from '../const';
 import { formatUser } from '../utils';
 
+/**
+ * @swagger
+ * tags:
+ *   name: User
+ *   description: User management
+ */
+
 const router = express.Router();
 
 /**
@@ -13,6 +20,7 @@ const router = express.Router();
  * /api/user/{id}:
  *   get:
  *     summary: Get a user by id
+ *     tags: [User]
  *     responses:
  *       200:
  *         description: The created user
@@ -73,6 +81,7 @@ router.get('/:id/count', async (req: Request, res: Response) => {
  * /api/user/{id}/count/increment:
  *   post:
  *     summary: Increment the count of a user
+ *     tags: [User]
  *     responses:
  *       200:
  *         description:
@@ -135,6 +144,7 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
  * /api/user/new:
  *   post:
  *     summary: Create a new user
+ *     tags: [User]
  *     parameters:
  *      - in: query
  *        name: username
@@ -220,6 +230,7 @@ router.post('/new', async (req: Request, res: Response) => {
  * /api/user/{id}:
  *   put:
  *     summary: Update a user by id
+ *     tags: [User]
  *     parameters:
  *       - in: query
  *         name: username
