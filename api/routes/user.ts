@@ -53,25 +53,28 @@ router.get('/:id/count', async (req: Request, res: Response) => {
 router.post('/:id/count/increment', async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
-    const user = await Count.findById(id);
+    const count = await Count.findById(id);
 
-    if (!user) {
+    // Check if the user exists
+    if (!count) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
+    // Check if the user is the same as the one in the token
     if (id !== req.jwt?.id) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
 
-    user.count++;
-    await user.save();
+    // Increment the count and save the document
+    count.count++;
+    await count.save();
 
     res.json({
-      id: user.id,
-      count: user.count,
-      updatedAt: user.updatedAt,
+      id: count.id,
+      count: count.count,
+      updatedAt: count.updatedAt,
     });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -94,18 +97,22 @@ router.post('/new', async (req: Request, res: Response) => {
       return;
     }
 
+    // Save the user and create a count document
     await user.save();
+    // Get the count document
     const count = await Count.findById(user.id);
-
     if (!count) {
       throw new Error('Something went wrong');
     }
 
+    // If the initialCount query parameter is provided, set the count to that value
+    //! Needs to be removed in next version
     if (initialCount) {
       count.count = parseInt(initialCount as string);
       await count.save();
     }
 
+    // Send the user and count documents with token
     res.json({
       token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
       ...formatUser(user, count),
@@ -120,11 +127,13 @@ router.put('/:id', async (req: Request, res: Response) => {
     const id = req.params.id;
     const { username, email, password } = req.query;
 
+    // Check if the user is the same as the one in the token
     if (id !== req.jwt?.id) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
 
+    // Update the user and count document
     const user = await User.findByIdAndUpdate(
       id,
       { username, email, password },
@@ -140,8 +149,10 @@ router.put('/:id', async (req: Request, res: Response) => {
       return;
     }
 
+    // Save the user document
     await user.save();
 
+    // Send the updated user and count documents
     res.json(formatUser(user, count));
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
