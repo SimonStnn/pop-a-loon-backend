@@ -83,6 +83,17 @@ router.post('/new', async (req: Request, res: Response) => {
     const { username, email, password, initialCount } = req.query;
 
     const user = new User({ username, email, password });
+
+    // Check if the user already exists
+    // User exists if the username or email is already in use
+    const userAlreadyExists = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+    if (userAlreadyExists) {
+      res.status(400).json({ error: 'User already exists' });
+      return;
+    }
+
     await user.save();
     const count = await Count.findById(user.id);
 
