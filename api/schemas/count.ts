@@ -1,11 +1,12 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-export const name = "Count";
+export const name = 'Count';
 
 export const schema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
+    required: true,
   },
   count: {
     type: Number,
@@ -18,7 +19,7 @@ export const schema = new mongoose.Schema({
   },
 });
 
-schema.pre("save", function (next) {
+schema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
