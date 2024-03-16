@@ -1,8 +1,8 @@
+import mongoose from 'mongoose';
+
 export type JWTSignature = {
   id: string;
 };
-
-import mongoose from 'mongoose';
 
 export type MongooseDocumentType<T> = mongoose.Document<unknown, {}, T> &
   T & {
