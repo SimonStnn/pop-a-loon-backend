@@ -15,6 +15,12 @@ export const swaggerOptions: swaggerJsdoc.Options = {
  * @swagger
  * components:
  *   schemas:
+ *     Error:
+ *       properties:
+ *         error:
+ *           type: string
+ *           description: The error message
+ *           required: true
  *     User:
  *       properties:
  *         id:
