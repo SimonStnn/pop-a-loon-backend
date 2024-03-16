@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import { JWTSignature } from '../const';
+import { formatUser } from '../utils';
 
 const router = express.Router();
 
@@ -22,14 +23,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      count: count.count,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    });
+    res.json(formatUser(user, count));
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -97,13 +91,8 @@ router.post('/new', async (req: Request, res: Response) => {
     }
 
     res.json({
-      id: user.id,
       token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-      username: user.username,
-      email: user.email,
-      count: count.count,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      ...formatUser(user, count),
     });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -137,14 +126,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     await user.save();
 
-    res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      count: count.count,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    });
+    res.json(formatUser(user, count));
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
