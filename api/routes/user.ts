@@ -80,7 +80,7 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
 
 router.post('/new', async (req: Request, res: Response) => {
   try {
-    const { username, email, password } = req.query;
+    const { username, email, password, initialCount } = req.query;
 
     const user = new User({ username, email, password });
     await user.save();
@@ -88,6 +88,11 @@ router.post('/new', async (req: Request, res: Response) => {
 
     if (!count) {
       throw new Error('Something went wrong');
+    }
+
+    if (initialCount) {
+      count.count = parseInt(initialCount as string);
+      await count.save();
     }
 
     res.json({
