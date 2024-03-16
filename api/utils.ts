@@ -25,7 +25,6 @@ export const formatUser = (
   return {
     id: user.id,
     username: user.username,
-    email: user.email,
     count: count.count,
     updatedAt: user.updatedAt,
     createdAt: user._id.getTimestamp(),
