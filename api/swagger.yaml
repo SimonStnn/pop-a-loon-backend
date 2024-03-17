@@ -9,6 +9,7 @@ security:
 tags:
   - name: User
     description: User management
+  - name: Leaderboard
 
 paths:
   /api/user/new:
@@ -156,6 +157,49 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/leaderboard:
+    get:
+      summary: Get the leaderboard
+      tags: [Leaderboard]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+            description: The number of users to return
+      responses:
+        200:
+          description: The leaderboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    description: The user making the request
+                    $ref: '#/components/schemas/User'
+                  userPosition:
+                    type: integer
+                    description: The position on the leaderboard of the user making the request
+                  topUsers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                required:
+                  - 'topUsers'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         500:
           $ref: '#/components/responses/InternalServerError'
 
