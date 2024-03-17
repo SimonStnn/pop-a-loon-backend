@@ -17,6 +17,7 @@ app.use(
   swaggerUi.serve,
   swaggerUi.setup(swaggerJsdoc(swaggerOptions), {
     customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Pop-a-loon API Documentation',
   }),
 );
 
