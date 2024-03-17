@@ -48,6 +48,19 @@ paths:
                         type: string
                         description: The user's token
                   - $ref: '#/components/schemas/User'
+          links:
+            UserId:
+              description: >
+                The id of the user. This id should be used when making requests to the user's endpoints. It identifies the user.
+              operationRef: '#/paths/~1api~1user~1{id}/get'
+              parameters:
+                id: $request.path.id
+            Token:
+              description: >
+                The token of the user. This token should be stored and included in the `authorization` header for future requests.
+              parameters:
+                authorization: $request.header.authorization
+
         400:
           $ref: '#/components/responses/BadRequest'
         404:
