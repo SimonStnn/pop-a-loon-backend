@@ -15,7 +15,9 @@ app.use('/api', ApiRoutes);
 app.use(
   '/docs',
   swaggerUi.serve,
-  swaggerUi.setup(swaggerJsdoc(swaggerOptions)),
+  swaggerUi.setup(swaggerJsdoc(swaggerOptions), {
+    customCss: '.swagger-ui .topbar { display: none }',
+  }),
 );
 
 const main = async () => {
