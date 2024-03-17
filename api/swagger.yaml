@@ -63,6 +63,8 @@ paths:
 
         400:
           $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
         500:
@@ -83,6 +85,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
         500:
@@ -119,8 +123,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-        403:
-          $ref: '#/components/responses/Forbidden'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
         500:
@@ -152,8 +156,8 @@ paths:
                     type: string
                     format: date-time
                     description: The date the user was last updated
-        403:
-          $ref: '#/components/responses/Forbidden'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
         500:
