@@ -3,9 +3,11 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import 'express-async-errors';
 
 import { swaggerOptions } from './swagger';
 import ApiRoutes from './routes/api';
+import error_handler from './middleware/error_handler';
 import { validateEnv } from './utils';
 
 const app = express();
@@ -20,6 +22,7 @@ app.use(
     customSiteTitle: 'Pop-a-loon API Documentation',
   }),
 );
+app.use(error_handler);
 
 const main = async () => {
   const db = await mongoose.connect(process.env.DATABASE_URL!);
