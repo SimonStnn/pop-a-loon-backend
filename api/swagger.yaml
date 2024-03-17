@@ -57,6 +57,8 @@ paths:
     get:
       summary: Get a user by id
       tags: [User]
+      security:
+        - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
@@ -73,6 +75,8 @@ paths:
     put:
       summary: Update a user by id
       tags: [User]
+      security:
+        - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/id'
         - in: query
@@ -111,6 +115,8 @@ paths:
     post:
       summary: Increment the count of a user
       tags: [User]
+      security:
+        - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
