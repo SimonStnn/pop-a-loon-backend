@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
@@ -6,7 +6,7 @@ import { formatUser } from '../utils';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string, 10) || 10;
   if (limit && (limit < 1 || limit > 10)) {
     return res
