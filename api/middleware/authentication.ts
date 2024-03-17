@@ -15,7 +15,7 @@ export default (req: Request, res: Response, next: NextFunction) => {
 
   // Check if token is provided
   if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   // Verify JWT token

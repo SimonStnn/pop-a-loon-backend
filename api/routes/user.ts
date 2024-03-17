@@ -63,7 +63,7 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
 
     // Check if the user is the same as the one in the token
     if (id !== req.jwt?.id) {
-      res.status(403).json({ error: 'Forbidden' });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
@@ -129,7 +129,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // Check if the user is the same as the one in the token
     if (id !== req.jwt?.id) {
-      res.status(403).json({ error: 'Forbidden' });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
