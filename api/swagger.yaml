@@ -161,18 +161,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            error: 'Bad request'
     Unauthorized: # 401
       description: 'Unauthorized'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            error: 'Invalid token'
     Forbidden: # 403
       description: 'Forbidden'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            error: 'Forbidden'
     NotFound: # 404
       description: 'Not found'
       content:
@@ -187,6 +193,8 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            error: 'Internal server error'
 
   schemas:
     User:
