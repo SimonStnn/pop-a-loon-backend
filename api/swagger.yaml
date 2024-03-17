@@ -1,0 +1,294 @@
+openapi: '3.0.8'
+info:
+  title: User API
+  version: 0.0.0 # Gets replaced by the version in package.json in swagger.ts
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: User
+    description: User management
+  - name: Leaderboard
+
+paths:
+  /api/user/new:
+    post:
+      summary: Create a new user
+      tags: [User]
+      security: []
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema:
+            type: string
+            description: The username of the user
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            description: The email of the user
+        - in: query
+          name: password
+          required: true
+          schema:
+            type: string
+            description: The password of the user
+      responses:
+        200:
+          description: The created user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                        description: The user's token
+                  - $ref: '#/components/schemas/User'
+          links:
+            UserId:
+              description: >
+                The id of the user. This id should be used when making requests to the user's endpoints. It identifies the user.
+              operationRef: '#/paths/~1api~1user~1{id}/get'
+              parameters:
+                id: $request.path.id
+            Token:
+              description: >
+                The token of the user. This token should be stored and included in the `authorization` header for future requests.
+              parameters:
+                authorization: $request.header.authorization
+
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user/{id}:
+    get:
+      summary: Get a user by id
+      tags: [User]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        200:
+          description: The created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update a user by id
+      tags: [User]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - in: query
+          name: username
+          required: false
+          schema:
+            type: string
+            description: The username of the user
+        - in: query
+          name: email
+          required: false
+          schema:
+            type: string
+            description: The email of the user
+        - in: query
+          name: password
+          required: false
+          schema:
+            type: string
+            description: The password of the user
+      responses:
+        200:
+          description: The created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user/{id}/count/increment:
+    post:
+      summary: Increment the count of a user
+      tags: [User]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        200:
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user's id
+                  count:
+                    type: integer
+                    description: The user's count
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: The date the user was last updated
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/leaderboard:
+    get:
+      summary: Get the leaderboard
+      tags: [Leaderboard]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+            description: The number of users to return
+      responses:
+        200:
+          description: The leaderboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    description: The user making the request
+                    $ref: '#/components/schemas/User'
+                  userPosition:
+                    type: integer
+                    description: The position on the leaderboard of the user making the request
+                  topUsers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                required:
+                  - 'topUsers'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: 'The id of the user'
+      schema:
+        type: string
+
+  responses:
+    BadRequest: # 400
+      description: 'Bad request'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Bad request'
+    Unauthorized: # 401
+      description: 'Unauthorized'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Invalid token'
+    Forbidden: # 403
+      description: 'Forbidden'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Forbidden'
+    NotFound: # 404
+      description: 'Not found'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'User not found'
+    InternalServerError: # 500
+      description: 'Internal server error'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Internal server error'
+
+  schemas:
+    User:
+      properties:
+        id:
+          type: string
+          description: The user's id
+        username:
+          type: string
+          description: The user's username
+        count:
+          type: integer
+          description: The user's count
+        updatedAt:
+          type: string
+          format: date-time
+          description: The date the user was last updated
+        createdAt:
+          type: string
+          format: date-time
+          description: The date the user was created
+      required:
+        - id
+        - username
+        - updatedAt
+    Error:
+      properties:
+        error:
+          type: string
+          description: The error message
+      required:
+        - 'error'
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: authorization
