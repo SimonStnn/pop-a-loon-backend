@@ -70,9 +70,9 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
 });
 
 router.post('/new', async (req: Request, res: Response) => {
-  const { username, email, password, initialCount } = req.query;
+  const { username, email, initialCount } = req.query;
 
-  const user = new User({ username, email, password });
+  const user = new User({ username, email });
 
   // Check if the user already exists
   // User exists if the username or email is already in use
@@ -108,7 +108,7 @@ router.post('/new', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
-  const { username, email, password } = req.query;
+  const { username, email } = req.query;
 
   // Check if the user is the same as the one in the token
   if (id !== req.jwt?.id) {
@@ -119,7 +119,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   // Update the user and count document
   const user = await User.findByIdAndUpdate(
     id,
-    { username, email, password },
+    { username, email },
     { new: true },
   );
   const count = await Count.findById(id);

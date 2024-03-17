@@ -7,7 +7,6 @@ export const name = 'User';
 export type User = {
   username: string;
   email: string;
-  password: string;
   updatedAt?: Date;
 };
 
@@ -16,9 +15,6 @@ export const schema = new mongoose.Schema({
     type: String,
   },
   email: {
-    type: String,
-  },
-  password: {
     type: String,
   },
   updatedAt: {

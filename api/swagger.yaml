@@ -30,12 +30,6 @@ paths:
           schema:
             type: string
             description: The email of the user
-        - in: query
-          name: password
-          required: true
-          schema:
-            type: string
-            description: The password of the user
       responses:
         200:
           description: The created user
@@ -107,12 +101,6 @@ paths:
           schema:
             type: string
             description: The email of the user
-        - in: query
-          name: password
-          required: false
-          schema:
-            type: string
-            description: The password of the user
       responses:
         200:
           description: The created user
