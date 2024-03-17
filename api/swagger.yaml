@@ -1,0 +1,221 @@
+openapi: '3.0.8'
+info:
+  title: User API
+  version: 0.0.0 # Gets replaced by the version in package.json in swagger.ts
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: User
+    description: User management
+
+paths:
+  /user/new:
+    post:
+      summary: Create a new user
+      tags: [User]
+      security: []
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema:
+            type: string
+            description: The username of the user
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            description: The email of the user
+        - in: query
+          name: password
+          required: true
+          schema:
+            type: string
+            description: The password of the user
+      responses:
+        200:
+          description: The created user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                        description: The user's token
+                  - $ref: '#/components/schemas/User'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /user/{id}:
+    get:
+      summary: Get a user by id
+      tags: [User]
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        200:
+          description: The created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update a user by id
+      tags: [User]
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - in: query
+          name: username
+          required: false
+          schema:
+            type: string
+            description: The username of the user
+        - in: query
+          name: email
+          required: false
+          schema:
+            type: string
+            description: The email of the user
+        - in: query
+          name: password
+          required: false
+          schema:
+            type: string
+            description: The password of the user
+      responses:
+        200:
+          description: The created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /user/{id}/count/increment:
+    post:
+      summary: Increment the count of a user
+      tags: [User]
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        200:
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user's id
+                  count:
+                    type: integer
+                    description: The user's count
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: The date the user was last updated
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: 'The id of the user'
+      schema:
+        type: string
+
+  responses:
+    BadRequest: # 400
+      description: 'Bad request'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized: # 401
+      description: 'Unauthorized'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden: # 403
+      description: 'Forbidden'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound: # 404
+      description: 'Not found'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'User not found'
+    InternalServerError: # 500
+      description: 'Internal server error'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    User:
+      properties:
+        id:
+          type: string
+          description: The user's id
+        username:
+          type: string
+          description: The user's username
+        count:
+          type: integer
+          description: The user's count
+        updatedAt:
+          type: string
+          format: date-time
+          description: The date the user was last updated
+        createdAt:
+          type: string
+          format: date-time
+          description: The date the user was created
+      required:
+        - id
+        - username
+        - updatedAt
+    Error:
+      properties:
+        error:
+          type: string
+          description: The error message
+      required:
+        - 'error'
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: authorization
