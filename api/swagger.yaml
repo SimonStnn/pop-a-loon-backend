@@ -11,7 +11,7 @@ tags:
     description: User management
 
 paths:
-  /user/new:
+  /api/user/new:
     post:
       summary: Create a new user
       tags: [User]
@@ -53,7 +53,7 @@ paths:
         404:
           $ref: '#/components/responses/NotFound'
 
-  /user/{id}:
+  /api/user/{id}:
     get:
       summary: Get a user by id
       tags: [User]
@@ -107,7 +107,7 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
 
-  /user/{id}/count/increment:
+  /api/user/{id}/count/increment:
     post:
       summary: Increment the count of a user
       tags: [User]
