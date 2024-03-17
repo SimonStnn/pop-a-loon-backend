@@ -5,7 +5,7 @@ export const swaggerOptions: swaggerJsdoc.Options = {
     openapi: '3.1.0',
     info: {
       title: 'Pop-a-loon API',
-      version: '0.1.0',
+      version: process.env.npm_package_version || '0.0.0',
     },
   },
   apis: ['./api/swagger.yaml', './api/**/*.ts'],
