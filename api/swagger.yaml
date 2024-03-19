@@ -280,9 +280,24 @@ components:
           required:
             - min
             - max
+        badge:
+          type: object
+          description:  The badge configuration
+          properties:
+            color:
+              type: string
+              description: The color of the badge
+              example: '#26282b'
+            backgroundColor:
+              type: string
+              description: The background color of the badge
+              example: '#7aa5eb'
+          required:
+            - color
+            - backgroundColor
       required:
         - 'spawnInterval'
-
+        - 'badge'
     User:
       properties:
         id:
