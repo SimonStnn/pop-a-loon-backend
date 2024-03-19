@@ -9,6 +9,7 @@ security:
 tags:
   - name: User
     description: User management
+  - name: Config
   - name: Leaderboard
 
 paths:
@@ -145,6 +146,42 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/configuration:
+    get:
+      summary: Get the configuration
+      tags: [Config]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  spawnInterval:
+                    type: object
+                    description: The interval in milliseconds to spawn a balloon
+                    properties:
+                      min:
+                        type: integer
+                        description: The minimum interval
+                        minimum: 0
+                      max:
+                        type: integer
+                        description: The maximum interval
+                        minimum: 0
+                    required:
+                      - min
+                      - max
+                required:
+                  - 'spawnInterval'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         500:
           $ref: '#/components/responses/InternalServerError'
 
