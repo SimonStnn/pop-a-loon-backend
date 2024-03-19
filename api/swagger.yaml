@@ -160,25 +160,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  spawnInterval:
-                    type: object
-                    description: The interval in milliseconds to spawn a balloon
-                    properties:
-                      min:
-                        type: integer
-                        description: The minimum interval
-                        minimum: 0
-                      max:
-                        type: integer
-                        description: The maximum interval
-                        minimum: 0
-                    required:
-                      - min
-                      - max
-                required:
-                  - 'spawnInterval'
+                $ref: '#/components/schemas/Config'
         401:
           $ref: '#/components/responses/Unauthorized'
         500:
@@ -280,6 +262,27 @@ components:
             error: 'Internal server error'
 
   schemas:
+    Config:
+      type: object
+      properties:
+        spawnInterval:
+          type: object
+          description: The interval in milliseconds to spawn a balloon
+          properties:
+            min:
+              type: integer
+              description: The minimum interval
+              minimum: 0
+            max:
+              type: integer
+              description: The maximum interval
+              minimum: 0
+          required:
+            - min
+            - max
+      required:
+        - 'spawnInterval'
+
     User:
       properties:
         id:
