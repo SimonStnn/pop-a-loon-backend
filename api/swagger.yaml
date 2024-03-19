@@ -27,7 +27,6 @@ paths:
             description: The username of the user
         - in: query
           name: email
-          required: true
           schema:
             type: string
             description: The email of the user
