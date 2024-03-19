@@ -71,6 +71,10 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
 
 router.post('/new', async (req: Request, res: Response) => {
   const { username, email, initialCount } = req.query;
+  if (!username) {
+    res.status(400).json({ error: 'Username is required' });
+    return;
+  }
 
   const user = new User({ username, email });
 
