@@ -303,7 +303,9 @@ components:
       required:
         - id
         - username
+        - count
         - updatedAt
+        - createdAt
     Error:
       properties:
         error:
