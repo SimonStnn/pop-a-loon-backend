@@ -191,7 +191,7 @@ paths:
                   user:
                     description: The user making the request
                     $ref: '#/components/schemas/User'
-                  userPosition:
+                  rank:
                     type: integer
                     description: The position on the leaderboard of the user making the request
                   topUsers:
