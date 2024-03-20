@@ -42,19 +42,13 @@ router.get('/:id/count', async (req: Request, res: Response) => {
   });
 });
 
-router.post('/:id/count/increment', async (req: Request, res: Response) => {
-  const id = req.params.id;
+router.post('/count/increment', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
   const count = await Count.findById(id);
 
   // Check if the user exists
   if (!count) {
     res.status(404).json({ error: 'User not found' });
-    return;
-  }
-
-  // Check if the user is the same as the one in the token
-  if (id !== req.jwt?.id) {
-    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
@@ -71,18 +65,12 @@ router.post('/:id/count/increment', async (req: Request, res: Response) => {
 
 router.post('/new', async (req: Request, res: Response) => {
   const { username, email, initialCount } = req.query;
-
-  const user = new User({ username, email });
-
-  // Check if the user already exists
-  // User exists if the username or email is already in use
-  const userAlreadyExists = await User.findOne({
-    $or: [{ username }, { email }],
-  });
-  if (userAlreadyExists) {
-    res.status(400).json({ error: 'User already exists' });
+  if (!username) {
+    res.status(400).json({ error: 'Username is required' });
     return;
   }
+
+  const user = new User({ username, email });
 
   // Save the user and create a count document
   await user.save();
