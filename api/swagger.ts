@@ -14,5 +14,5 @@ export const swaggerOptions: swaggerJsdoc.Options = {
       },
     ],
   },
-  apis: ['./api/swagger.yaml', './api/**/*.ts'],
+  apis: ['./**/swagger.yaml', './api/**/*.ts'],
 };
