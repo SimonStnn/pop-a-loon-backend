@@ -115,14 +115,12 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
 
-  /api/user/{id}/count/increment:
+  /api/user/count/increment:
     post:
       summary: Increment the count of a user
       tags: [User]
       security:
         - ApiKeyAuth: []
-      parameters:
-        - $ref: '#/components/parameters/id'
       responses:
         200:
           description: The updated user
