@@ -24,6 +24,10 @@ app.use(
 );
 app.use(error_handler);
 
+app.get('/', (req: Request, res: Response) => {
+  res.redirect('/docs');
+});
+
 const main = async () => {
   const db = await mongoose.connect(process.env.DATABASE_URL!);
   console.log('Connected to MongoDB');
