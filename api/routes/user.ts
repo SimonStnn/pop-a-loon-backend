@@ -72,16 +72,6 @@ router.post('/new', async (req: Request, res: Response) => {
 
   const user = new User({ username, email });
 
-  // Check if the user already exists
-  // User exists if the username or email is already in use
-  const userAlreadyExists = await User.findOne({
-    $or: [{ username }, { email }],
-  });
-  if (userAlreadyExists) {
-    res.status(400).json({ error: 'User already exists' });
-    return;
-  }
-
   // Save the user and create a count document
   await user.save();
   // Get the count document
