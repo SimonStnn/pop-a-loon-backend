@@ -12,6 +12,10 @@ export const swaggerOptions: swaggerJsdoc.Options = {
         url: 'http://localhost:3000',
         description: 'Development server',
       },
+      {
+        url: 'https://pop-a-loon-backend.vercel.app',
+        description: 'Production server',
+      },
     ],
   },
   apis: ['./**/swagger.yaml', './api/**/*.ts'],
