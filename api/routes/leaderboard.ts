@@ -32,7 +32,7 @@ router.get('/', async (req: Request, res: Response) => {
 
   const response = {
     user: formatUser(user, userCount),
-    userPosition: position + 1,
+    rank: position + 1,
     topUsers: [] as ReturnType<typeof formatUser>[],
   };
   for (const count of counts) {
