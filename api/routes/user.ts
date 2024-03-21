@@ -94,15 +94,9 @@ router.post('/new', async (req: Request, res: Response) => {
   });
 });
 
-router.put('/:id', async (req: Request, res: Response) => {
-  const id = req.params.id;
+router.put('/', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
   const { username, email } = req.query;
-
-  // Check if the user is the same as the one in the token
-  if (id !== req.jwt?.id) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
 
   // Update the user and count document
   const user = await User.findByIdAndUpdate(
