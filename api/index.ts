@@ -30,7 +30,7 @@ app.get('/', (req: Request, res: Response) => {
 
 const main = async () => {
   const db = await mongoose.connect(process.env.DATABASE_URL!);
-  console.log('Connected to MongoDB');
+  console.log('Connected to MongoDB at', db.connection.host);
 };
 
 if (require.main === module) {
