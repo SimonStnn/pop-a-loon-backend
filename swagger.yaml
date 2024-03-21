@@ -82,13 +82,14 @@ paths:
           $ref: '#/components/responses/NotFound'
         500:
           $ref: '#/components/responses/InternalServerError'
+  
+  /api/user/:
     put:
-      summary: Update a user by id
+      summary: Update user
       tags: [User]
       security:
         - ApiKeyAuth: []
       parameters:
-        - $ref: '#/components/parameters/id'
         - in: query
           name: username
           required: false
