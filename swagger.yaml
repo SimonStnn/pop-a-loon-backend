@@ -305,6 +305,9 @@ components:
         username:
           type: string
           description: The user's username
+        email:
+          type: string
+          description: The user's email (will only be returned if the user is the same as the one making the request)
         count:
           type: integer
           description: The user's count
