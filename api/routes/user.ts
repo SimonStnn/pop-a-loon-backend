@@ -22,7 +22,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     return;
   }
 
-  res.json(formatUser(user, count));
+  res.json(formatUser(user, count, req.jwt!));
 });
 
 router.get('/:id/count', async (req: Request, res: Response) => {
@@ -90,7 +90,7 @@ router.post('/new', async (req: Request, res: Response) => {
   // Send the user and count documents with token
   res.json({
     token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-    ...formatUser(user, count),
+    ...formatUser(user, count, req.jwt!),
   });
 });
 
@@ -118,7 +118,7 @@ router.put('/', async (req: Request, res: Response) => {
   await user.save();
 
   // Send the updated user and count documents
-  res.json(formatUser(user, count));
+  res.json(formatUser(user, count, req.jwt!));
 });
 
 export default router;
