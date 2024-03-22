@@ -70,7 +70,7 @@ router.post('/new', async (req: Request, res: Response) => {
     return;
   }
 
-  const user = new User({ username, email });
+  const user = new User({ username, email: email || '' });
 
   // Save the user and create a count document
   await user.save();
