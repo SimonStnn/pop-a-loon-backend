@@ -115,6 +115,24 @@ paths:
           $ref: '#/components/responses/NotFound'
         500:
           $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete user
+      tags: [User]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The delted user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
 
   /api/user/count/increment:
     post:
