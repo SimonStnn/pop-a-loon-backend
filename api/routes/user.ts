@@ -121,4 +121,20 @@ router.put('/', async (req: Request, res: Response) => {
   res.json(formatUser(user, count, req.jwt!));
 });
 
+router.delete('/', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
+
+  const user = await User.findByIdAndDelete(id);
+  const count = await Count.findByIdAndDelete(id);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  } else if (!count) {
+    res.status(404).json({ error: 'Count not found' });
+    return;
+  }
+
+  res.json(formatUser(user, count, req.jwt!));
+});
 export default router;
