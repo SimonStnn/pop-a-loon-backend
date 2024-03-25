@@ -55,6 +55,7 @@ router.get('/:id/count', async (req: Request, res: Response) => {
   });
 });
 
+router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
   const count = await Count.findById(id);
