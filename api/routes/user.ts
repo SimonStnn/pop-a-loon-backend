@@ -1,10 +1,23 @@
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import { JWTSignature } from '../const';
 import { formatUser } from '../utils';
+
+const newUserLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 1, // 1 requests per minute per IP
+  message: 'Too many requests',
+});
+
+const countLimiter = rateLimit({
+  windowMs: 30 * 1000, // 30 seconds
+  max: 3, // 10 requests per minute per IP
+  message: 'Too many requests',
+});
 
 const router = express.Router();
 
@@ -63,6 +76,7 @@ router.post('/count/increment', async (req: Request, res: Response) => {
   });
 });
 
+router.use('/new', newUserLimiter);
 router.post('/new', async (req: Request, res: Response) => {
   const { username, email, initialCount } = req.query;
   if (!username) {
