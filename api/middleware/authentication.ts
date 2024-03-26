@@ -8,7 +8,7 @@ export default (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization;
 
   // If path is /new, move to the next middleware or route handler
-  if (req.path === '/user/new') {
+  if (['/user/new', '/status'].includes(req.path)) {
     next();
     return;
   }
