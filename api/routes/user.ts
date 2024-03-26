@@ -7,16 +7,18 @@ import Count from '../schemas/count';
 import { JWTSignature } from '../const';
 import { formatUser } from '../utils';
 
+const toManyRequestsResponse = { error: 'Too many requests' };
+
 const newUserLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 1, // 1 requests per minute per IP
-  message: 'Too many requests',
+  message: toManyRequestsResponse,
 });
 
 const countLimiter = rateLimit({
   windowMs: 30 * 1000, // 30 seconds
-  max: 3, // 10 requests per minute per IP
-  message: 'Too many requests',
+  max: 3, // 3 requests per 30 seconds per IP
+  message: toManyRequestsResponse,
 });
 
 const router = express.Router();
