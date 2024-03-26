@@ -58,6 +58,8 @@ paths:
 
         400:
           $ref: '#/components/responses/BadRequest'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -162,6 +164,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -269,6 +273,14 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error: 'User not found'
+    TooManyRequests: # 429
+      description: 'Too many requests'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Too many requests'
     InternalServerError: # 500
       description: 'Internal server error'
       content:
