@@ -84,7 +84,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         500:
           $ref: '#/components/responses/InternalServerError'
-  
+
   /api/user/:
     put:
       summary: Update user
@@ -166,6 +166,29 @@ paths:
           $ref: '#/components/responses/NotFound'
         429:
           $ref: '#/components/responses/TooManyRequests'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/status:
+    get:
+      summary: Get the status of the server
+      tags: [Config]
+      responses:
+        200:
+          description: The status of the server
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: The status of the server
+                    enum:
+                      - 'up'
+                  version:
+                    type: string
+                    description: The version of the server
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -311,7 +334,7 @@ components:
             - max
         badge:
           type: object
-          description:  The badge configuration
+          description: The badge configuration
           properties:
             color:
               type: string
