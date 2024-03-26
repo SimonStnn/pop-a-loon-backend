@@ -1,5 +1,6 @@
 import { type UserDocumentType } from './schemas/user';
 import { type CountDocumentType } from './schemas/count';
+import { JWTSignature } from './const';
 
 export const validateEnv = () => {
   if (!process.env.DATABASE_URL) {
@@ -21,10 +22,12 @@ export const validateEnv = () => {
 export const formatUser = (
   user: UserDocumentType,
   count: CountDocumentType,
+  jwt?: JWTSignature,
 ) => {
   return {
     id: user.id,
     username: user.username,
+    email: jwt?.id === user.id ? user.email : undefined,
     count: count.count,
     updatedAt: user.updatedAt,
     createdAt: user._id.getTimestamp(),

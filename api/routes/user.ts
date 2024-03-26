@@ -1,10 +1,25 @@
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import { JWTSignature } from '../const';
 import { formatUser } from '../utils';
+
+const toManyRequestsResponse = { error: 'Too many requests' };
+
+const newUserLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 1, // 1 requests per minute per IP
+  message: toManyRequestsResponse,
+});
+
+const countLimiter = rateLimit({
+  windowMs: 30 * 1000, // 30 seconds
+  max: 3, // 3 requests per 30 seconds per IP
+  message: toManyRequestsResponse,
+});
 
 const router = express.Router();
 
@@ -22,7 +37,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     return;
   }
 
-  res.json(formatUser(user, count));
+  res.json(formatUser(user, count, req.jwt!));
 });
 
 router.get('/:id/count', async (req: Request, res: Response) => {
@@ -42,6 +57,7 @@ router.get('/:id/count', async (req: Request, res: Response) => {
   });
 });
 
+router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
   const count = await Count.findById(id);
@@ -63,6 +79,7 @@ router.post('/count/increment', async (req: Request, res: Response) => {
   });
 });
 
+router.use('/new', newUserLimiter);
 router.post('/new', async (req: Request, res: Response) => {
   const { username, email, initialCount } = req.query;
   if (!username) {
@@ -70,7 +87,7 @@ router.post('/new', async (req: Request, res: Response) => {
     return;
   }
 
-  const user = new User({ username, email });
+  const user = new User({ username, email: email || '' });
 
   // Save the user and create a count document
   await user.save();
@@ -90,19 +107,13 @@ router.post('/new', async (req: Request, res: Response) => {
   // Send the user and count documents with token
   res.json({
     token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-    ...formatUser(user, count),
+    ...formatUser(user, count, req.jwt!),
   });
 });
 
-router.put('/:id', async (req: Request, res: Response) => {
-  const id = req.params.id;
+router.put('/', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
   const { username, email } = req.query;
-
-  // Check if the user is the same as the one in the token
-  if (id !== req.jwt?.id) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
 
   // Update the user and count document
   const user = await User.findByIdAndUpdate(
@@ -124,7 +135,23 @@ router.put('/:id', async (req: Request, res: Response) => {
   await user.save();
 
   // Send the updated user and count documents
-  res.json(formatUser(user, count));
+  res.json(formatUser(user, count, req.jwt!));
 });
 
+router.delete('/', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
+
+  const user = await User.findByIdAndDelete(id);
+  const count = await Count.findByIdAndDelete(id);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  } else if (!count) {
+    res.status(404).json({ error: 'Count not found' });
+    return;
+  }
+
+  res.json(formatUser(user, count, req.jwt!));
+});
 export default router;

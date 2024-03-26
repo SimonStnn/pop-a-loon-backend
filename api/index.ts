@@ -30,7 +30,7 @@ app.get('/', (req: Request, res: Response) => {
 
 const main = async () => {
   const db = await mongoose.connect(process.env.DATABASE_URL!);
-  console.log('Connected to MongoDB');
+  console.log('Connected to MongoDB at', db.connection.host);
 };
 
 if (require.main === module) {
@@ -38,9 +38,11 @@ if (require.main === module) {
   validateEnv();
   main();
 
-  app.listen(process.env.PORT || 3000, () => {
+  app.listen(Number(process.env.PORT) || 3000, () => {
     console.log(
       `Server is running on http://localhost:${process.env.PORT || 3000}`,
     );
   });
 }
+
+export default app;

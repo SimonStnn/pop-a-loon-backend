@@ -31,8 +31,8 @@ router.get('/', async (req: Request, res: Response) => {
     .exec();
 
   const response = {
-    user: formatUser(user, userCount),
-    userPosition: position + 1,
+    user: formatUser(user, userCount, req.jwt!),
+    rank: position + 1,
     topUsers: [] as ReturnType<typeof formatUser>[],
   };
   for (const count of counts) {

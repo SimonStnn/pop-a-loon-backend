@@ -58,6 +58,8 @@ paths:
 
         400:
           $ref: '#/components/responses/BadRequest'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -82,13 +84,14 @@ paths:
           $ref: '#/components/responses/NotFound'
         500:
           $ref: '#/components/responses/InternalServerError'
+  
+  /api/user/:
     put:
-      summary: Update a user by id
+      summary: Update user
       tags: [User]
       security:
         - ApiKeyAuth: []
       parameters:
-        - $ref: '#/components/parameters/id'
         - in: query
           name: username
           required: false
@@ -104,6 +107,24 @@ paths:
       responses:
         200:
           description: The created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete user
+      tags: [User]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The delted user
           content:
             application/json:
               schema:
@@ -143,6 +164,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -191,7 +214,7 @@ paths:
                   user:
                     description: The user making the request
                     $ref: '#/components/schemas/User'
-                  userPosition:
+                  rank:
                     type: integer
                     description: The position on the leaderboard of the user making the request
                   topUsers:
@@ -250,6 +273,14 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error: 'User not found'
+    TooManyRequests: # 429
+      description: 'Too many requests'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Too many requests'
     InternalServerError: # 500
       description: 'Internal server error'
       content:
@@ -304,6 +335,9 @@ components:
         username:
           type: string
           description: The user's username
+        email:
+          type: string
+          description: The user's email (will only be returned if the user is the same as the one making the request)
         count:
           type: integer
           description: The user's count
