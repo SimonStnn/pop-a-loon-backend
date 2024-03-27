@@ -17,16 +17,6 @@ export const validateEnv = () => {
     console.error('No token expiration provided');
     process.exit(1);
   }
-
-  if (!process.env.SSL_KEY) {
-    console.error('No SSL key provided');
-    process.exit(1);
-  }
-
-  if (!process.env.SSL_CERT) {
-    console.error('No SSL certificate provided');
-    process.exit(1);
-  }
 };
 
 export const formatUser = (
