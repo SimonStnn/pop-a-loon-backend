@@ -3,12 +3,4 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=mongodb://mongo:27017/pop-a-loon
-    depends_on:
-      - mongo
-  mongo:
-    image: mongo
-    ports:
-      - "27000:27017"
+      - '3000:3000'
