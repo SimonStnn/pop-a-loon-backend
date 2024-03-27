@@ -13,6 +13,11 @@ export const validateEnv = () => {
     process.exit(1);
   }
 
+  if (!process.env.JWT_EXPIRATION) {
+    console.error('No token expiration provided');
+    process.exit(1);
+  }
+
   if (!process.env.SSL_KEY) {
     console.error('No SSL key provided');
     process.exit(1);
