@@ -1,5 +1,3 @@
-import https from 'https';
-import fs from 'fs';
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -40,22 +38,11 @@ if (require.main === module) {
   validateEnv();
   main();
 
-  const port = Number(process.env.PORT || 3000);
-
-  if (process.env.NODE_ENV === 'development') {
-    app.listen(port, () => {
-      console.log(`Server is running on https://localhost:${port}`);
-    });
-  } else {
-    const options = {
-      key: fs.readFileSync(process.env.SSL_KEY!),
-      cert: fs.readFileSync(process.env.SSL_CERT!),
-    };
-
-    https.createServer(options, app).listen(port, () => {
-      console.log('SSL server started on port', port);
-    });
-  }
+  app.listen(Number(process.env.PORT) || 3000, () => {
+    console.log(
+      `Server is running on http://localhost:${process.env.PORT || 3000}`,
+    );
+  });
 }
 
 export default app;
