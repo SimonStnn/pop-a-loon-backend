@@ -9,6 +9,7 @@ import 'express-async-errors';
 import { swaggerOptions } from './swagger';
 import ApiRoutes from './routes/api';
 import error_handler from './middleware/error_handler';
+import logger from './logger';
 import { validateEnv } from './utils';
 
 const app = express();
@@ -32,7 +33,7 @@ app.get('/', (req: Request, res: Response) => {
 
 const main = async () => {
   const db = await mongoose.connect(process.env.DATABASE_URL!);
-  console.log('Connected to MongoDB at', db.connection.host);
+  logger.info('Connected to MongoDB at', db.connection.host);
 };
 
 if (require.main === module) {
@@ -41,7 +42,7 @@ if (require.main === module) {
   main();
 
   app.listen(Number(process.env.PORT) || 3000, () => {
-    console.log(
+    logger.info(
       `Server is running on http://localhost:${process.env.PORT || 3000}`,
     );
   });
