@@ -41,7 +41,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.2.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "winston": "^3.13.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
