@@ -19,6 +19,13 @@ export const validateEnv = () => {
   }
 };
 
+export const testOrigin = (origin: string) => {
+  return (
+    origin === 'chrome-extension://pahcoancbdjmffpmfbnjablnabomdocp' ||
+    origin.startsWith('moz-extension://')
+  );
+};
+
 export const formatUser = (
   user: UserDocumentType,
   count: CountDocumentType,
