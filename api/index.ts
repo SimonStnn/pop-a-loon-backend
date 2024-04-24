@@ -10,11 +10,20 @@ import { swaggerOptions } from './swagger';
 import ApiRoutes from './routes/api';
 import error_handler from './middleware/error_handler';
 import logger from './logger';
-import { validateEnv } from './utils';
+import { testOrigin, validateEnv } from './utils';
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (origin && testOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+  }),
+);
 
 app.use('/api', ApiRoutes);
 app.use(
