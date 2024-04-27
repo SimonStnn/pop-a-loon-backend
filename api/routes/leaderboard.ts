@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
-import { formatUser } from '../utils';
+import { fetchLeaderboard, formatUser } from '../utils';
 
 const router = express.Router();
 
@@ -23,7 +23,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 
   // Get the top 10 users with the highest count
-  const counts = await Count.find().sort({ count: -1 }).limit(limit).exec();
+  const counts = await fetchLeaderboard(limit);
 
   // Get the position of the user in the database
   const position = await Count.find({ count: { $gt: userCount.count } })
