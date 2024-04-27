@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
@@ -8,10 +9,21 @@ import 'express-async-errors';
 import { swaggerOptions } from './swagger';
 import ApiRoutes from './routes/api';
 import error_handler from './middleware/error_handler';
-import { validateEnv } from './utils';
+import logger from './logger';
+import { testOrigin, validateEnv } from './utils';
 
 const app = express();
 app.use(express.json());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (origin && testOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+  }),
+);
 
 app.use('/api', ApiRoutes);
 app.use(
@@ -29,8 +41,9 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 const main = async () => {
+  logger.info('Connecting to MongoDB at', process.env.DATABASE_URL!);
   const db = await mongoose.connect(process.env.DATABASE_URL!);
-  console.log('Connected to MongoDB at', db.connection.host);
+  logger.info('Connected to MongoDB at', db.connection.host);
 };
 
 if (require.main === module) {
@@ -39,7 +52,7 @@ if (require.main === module) {
   main();
 
   app.listen(Number(process.env.PORT) || 3000, () => {
-    console.log(
+    logger.info(
       `Server is running on http://localhost:${process.env.PORT || 3000}`,
     );
   });

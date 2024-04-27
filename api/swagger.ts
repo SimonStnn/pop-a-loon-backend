@@ -13,7 +13,7 @@ export const swaggerOptions: swaggerJsdoc.Options = {
         description: 'Development server',
       },
       {
-        url: 'http://stijnen17.tilaa.cloud:3000/',
+        url: 'https://pop-a-loon.stijnen.be',
         description: 'Production server',
       },
     ],
