@@ -97,13 +97,6 @@ router.post('/new', async (req: Request, res: Response) => {
     throw new Error('Something went wrong');
   }
 
-  // If the initialCount query parameter is provided, set the count to that value
-  //! Needs to be removed in next version
-  if (initialCount) {
-    count.count = parseInt(initialCount as string);
-    await count.save();
-  }
-
   // Send the user and count documents with token
   res.json({
     token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
