@@ -23,9 +23,7 @@ const countLimiter = rateLimit({
 
 const router = express.Router();
 
-router.get('/:id', async (req: Request, res: Response) => {
-  const id = req.params.id;
-
+const getUserAndCount = async (id: string, req: Request, res: Response) => {
   const user = await User.findById(id);
   const count = await Count.findById(id);
 
@@ -38,6 +36,16 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 
   res.json(formatUser(user, count, req.jwt!));
+};
+
+router.get('/', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
+  await getUserAndCount(id, req, res);
+});
+
+router.get('/:id', async (req: Request, res: Response) => {
+  const id = req.params.id;
+  await getUserAndCount(id, req, res);
 });
 
 router.get('/:id/count', async (req: Request, res: Response) => {
