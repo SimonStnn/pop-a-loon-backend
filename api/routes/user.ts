@@ -19,6 +19,10 @@ const countLimiter = rateLimit({
   windowMs: 30 * 1000, // 30 seconds
   max: 3, // 3 requests per 30 seconds per IP
   message: toManyRequestsResponse,
+  keyGenerator: function (req: Request) {
+    // Use the user's jwt as the key for rate limiting
+    return req.jwt!.id;
+  },
 });
 
 const router = express.Router();
