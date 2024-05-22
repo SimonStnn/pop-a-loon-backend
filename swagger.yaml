@@ -10,7 +10,7 @@ tags:
   - name: User
     description: User management
   - name: Config
-  - name: Leaderboard
+  - name: Statistics
 
 paths:
   /api/user/new:
@@ -266,6 +266,30 @@ paths:
                   - 'topUsers'
         400:
           $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+  /api/statistics:
+    get:
+      summary: Get the statistics
+      tags: [Statistics]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalPopped:
+                    type: integer
+                    description: The total number of balloons popped
+                required:
+                  - 'totalPopped'
+
         401:
           $ref: '#/components/responses/Unauthorized'
         500:
