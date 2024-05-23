@@ -6,6 +6,7 @@ import StatusRoutes from './status';
 import UserRoutes from './user';
 import LeaderboardRoutes from './leaderboard';
 import ConfigRoutes from './config';
+import StatisticsRoutes from './statistics';
 
 const ApiRoutes = express.Router();
 
@@ -15,5 +16,6 @@ ApiRoutes.use('/status', StatusRoutes);
 ApiRoutes.use('/user', UserRoutes);
 ApiRoutes.use('/leaderboard', LeaderboardRoutes);
 ApiRoutes.use('/configuration', ConfigRoutes);
+ApiRoutes.use('/statistics', StatisticsRoutes);
 
 export default ApiRoutes;
