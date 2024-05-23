@@ -207,6 +207,7 @@ paths:
                   version:
                     type: string
                     description: The version of the server
+                    example: '1.0.0'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -231,7 +232,7 @@ paths:
   /api/leaderboard:
     get:
       summary: Get the leaderboard
-      tags: [Leaderboard]
+      tags: [Statistics]
       security:
         - ApiKeyAuth: []
       parameters:
@@ -244,6 +245,14 @@ paths:
             maximum: 10
             default: 10
             description: The number of users to return
+        - in: query
+          name: skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            description: The number of users to skip
       responses:
         200:
           description: The leaderboard
