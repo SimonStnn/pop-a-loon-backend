@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { fetchTotalPopped } from '@/utils';
+import { fetchTotalPopped } from '../utils';
 
 const router = express.Router();
 
