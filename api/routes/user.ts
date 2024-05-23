@@ -93,13 +93,9 @@ router.post('/count/increment', async (req: Request, res: Response) => {
 
 router.use('/new', newUserLimiter);
 router.post('/new', async (req: Request, res: Response) => {
-  const { username, email, initialCount } = req.query;
-  if (!username) {
-    res.status(400).json({ error: 'Username is required' });
-    return;
-  }
+  const { username, email } = req.query;
 
-  const user = new User({ username, email: email || '' });
+  const user = new User({ username, email });
 
   // Save the user and create a count document
   await user.save();
