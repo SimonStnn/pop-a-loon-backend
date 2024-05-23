@@ -7,11 +7,16 @@ import { fetchLeaderboard, formatUser } from '../utils';
 const router = express.Router();
 
 router.get('/', async (req: Request, res: Response) => {
-  const limit = parseInt(req.query.limit as string, 10) || 10;
-  if (limit && (limit < 1 || limit > 10)) {
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = parseInt(req.query.skip as string) || 0;
+
+  if (limit < 1 || limit > 10) {
     return res
       .status(400)
       .json({ message: 'Invalid limit, limit must be 1 < limit < 10' });
+  }
+  if (skip < 0) {
+    return res.status(400).json({ message: 'Invalid skip, skip must be > 0' });
   }
 
   const userId = req.jwt?.id;
@@ -23,7 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 
   // Get the top 10 users with the highest count
-  const counts = await fetchLeaderboard(limit);
+  const counts = await fetchLeaderboard(limit, skip);
 
   // Get the position of the user in the database
   const position = await Count.find({ count: { $gt: userCount.count } })

@@ -50,18 +50,24 @@ export const formatUser = (
 
 export const fetchLeaderboard = async (
   limit: number,
+  skip: number,
 ): Promise<CountDocumentType[]> => {
-  const cachedLoaderboard: CountDocumentType[] | undefined = cache.get(
-    cacheLocation.leaderboard,
-  );
+  const cacheKey = `${cacheLocation.leaderboard}-${limit}-${skip}`;
+
+  const cachedLoaderboard: CountDocumentType[] | undefined =
+    cache.get(cacheKey);
   if (cachedLoaderboard) {
     console.log('Using cached leaderboard');
     return cachedLoaderboard;
   }
 
-  const counts = await Count.find().sort({ count: -1 }).limit(limit).exec();
+  const counts = await Count.find()
+    .sort({ count: -1 })
+    .skip(skip)
+    .limit(limit)
+    .exec();
 
-  cache.set(cacheLocation.leaderboard, counts, 60);
+  cache.set(cacheKey, counts, 60);
 
   console.log('Counts fetched from MongoDB');
   return counts;
