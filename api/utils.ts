@@ -6,6 +6,7 @@ import { JWTSignature } from './const';
 const cache = new NodeCache();
 const cacheLocation = {
   leaderboard: 'leaderboard',
+  totalPopped: 'totalPopped',
 };
 
 export const validateEnv = () => {
@@ -64,4 +65,25 @@ export const fetchLeaderboard = async (
 
   console.log('Counts fetched from MongoDB');
   return counts;
+};
+
+export const fetchTotalPopped = async (): Promise<number> => {
+  const cachedTotalPopped: number | undefined = cache.get(
+    cacheLocation.totalPopped,
+  );
+  if (cachedTotalPopped) {
+    console.log('Using cached totalPopped');
+    return cachedTotalPopped;
+  }
+
+  const totalPopped = (
+    await Count.aggregate([
+      { $group: { _id: null, total: { $sum: '$count' } } },
+    ]).exec()
+  )[0].total;
+
+  cache.set(cacheLocation.totalPopped, totalPopped, 5 * 60);
+
+  console.log('Total popped fetched from MongoDB');
+  return totalPopped;
 };
