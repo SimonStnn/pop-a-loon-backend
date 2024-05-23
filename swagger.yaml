@@ -21,7 +21,6 @@ paths:
       parameters:
         - in: query
           name: username
-          required: true
           schema:
             type: string
             description: The username of the user
