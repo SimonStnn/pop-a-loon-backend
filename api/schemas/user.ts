@@ -5,7 +5,7 @@ import Count from './count';
 export const name = 'User';
 
 export type User = {
-  username: string;
+  username?: string;
   email?: string;
   updatedAt: Date;
 };
@@ -13,7 +13,6 @@ export type User = {
 export const schema = new mongoose.Schema({
   username: {
     type: String,
-    required: true,
   },
   email: {
     type: String,

@@ -1,7 +1,7 @@
 import NodeCache from 'node-cache';
 import { type UserDocumentType } from './schemas/user';
 import Count, { type CountDocumentType } from './schemas/count';
-import { JWTSignature } from './const';
+import { JWTSignature, ResponseSchema } from './const';
 
 const cache = new NodeCache();
 const cacheLocation = {
@@ -37,10 +37,10 @@ export const formatUser = (
   user: UserDocumentType,
   count: CountDocumentType,
   jwt?: JWTSignature,
-) => {
+): ResponseSchema['user'] => {
   return {
     id: user.id,
-    username: user.username,
+    username: user.username || '',
     email: jwt?.id === user.id ? user.email : undefined,
     count: count.count,
     updatedAt: user.updatedAt,

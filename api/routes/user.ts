@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
-import { JWTSignature } from '../const';
+import { JWTSignature, ResponseSchema } from '../const';
 import { formatUser } from '../utils';
 
 const toManyRequestsResponse = { error: 'Too many requests' };
@@ -27,29 +27,33 @@ const countLimiter = rateLimit({
 
 const router = express.Router();
 
-const getUserAndCount = async (id: string, req: Request, res: Response) => {
+const getUserAndCount = async (
+  id: string,
+  req: Request,
+  res: Response,
+): Promise<ResponseSchema['user']> => {
   const user = await User.findById(id);
   const count = await Count.findById(id);
 
   if (!user) {
     res.status(404).json({ error: 'User not found' });
-    return;
+    throw new Error('User not found');
   } else if (!count) {
     res.status(404).json({ error: 'Count not found' });
-    return;
+    throw new Error('Count not found');
   }
 
-  res.json(formatUser(user, count, req.jwt!));
+  return formatUser(user, count, req.jwt!);
 };
 
 router.get('/', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
-  await getUserAndCount(id, req, res);
+  res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
-  await getUserAndCount(id, req, res);
+  res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
 });
 
 router.get('/:id/count', async (req: Request, res: Response) => {
@@ -93,13 +97,9 @@ router.post('/count/increment', async (req: Request, res: Response) => {
 
 router.use('/new', newUserLimiter);
 router.post('/new', async (req: Request, res: Response) => {
-  const { username, email, initialCount } = req.query;
-  if (!username) {
-    res.status(400).json({ error: 'Username is required' });
-    return;
-  }
+  const { username, email } = req.query;
 
-  const user = new User({ username, email: email || '' });
+  const user = new User({ username, email });
 
   // Save the user and create a count document
   await user.save();
@@ -140,7 +140,7 @@ router.put('/', async (req: Request, res: Response) => {
   await user.save();
 
   // Send the updated user and count documents
-  res.json(formatUser(user, count, req.jwt!));
+  res.json(formatUser(user, count, req.jwt!) as ResponseSchema['user']);
 });
 
 router.delete('/', async (req: Request, res: Response) => {
@@ -157,6 +157,6 @@ router.delete('/', async (req: Request, res: Response) => {
     return;
   }
 
-  res.json(formatUser(user, count, req.jwt!));
+  res.json(formatUser(user, count, req.jwt!) as ResponseSchema['user']);
 });
 export default router;
