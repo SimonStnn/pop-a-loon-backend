@@ -12,7 +12,7 @@ export type MongooseDocumentType<T> = mongoose.Document<unknown, {}, T> &
 export type ResponseSchema = {
   user: {
     id: string;
-    username: string;
+    username?: string;
     email?: string;
     count: number;
     updatedAt: Date;

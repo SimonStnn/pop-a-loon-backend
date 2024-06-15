@@ -41,11 +41,7 @@ router.get('/', async (req: Request, res: Response) => {
     topUsers: [] as ReturnType<typeof formatUser>[],
   };
   for (const count of counts) {
-    const user = await User.findById(count.id).exec();
-    if (!user) {
-      return;
-    }
-    response.topUsers.push(formatUser(user, count));
+    response.topUsers.push(formatUser(count.user, count));
   }
 
   res.json(response);
