@@ -31,21 +31,35 @@ router.get('/', async (req: Request, res: Response) => {
   const counts = await fetchLeaderboard(limit, skip);
 
   // Get the position of the user in the database
-  const position = await Count.find({ count: { $gt: userCount.count } })
-    .countDocuments()
-    .exec();
+  const position = (
+    await Count.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $match: {
+          'user.username': { $exists: true, $ne: null },
+          count: { $gt: userCount.count },
+        },
+      },
+    ])
+      .count('count')
+      .exec()
+  )[0].count;
 
   const response = {
     user: formatUser(user, userCount, req.jwt!),
-    rank: position + 1,
+    rank: user.username && position ? position + 1 : null,
     topUsers: [] as ReturnType<typeof formatUser>[],
   };
   for (const count of counts) {
-    const user = await User.findById(count.id).exec();
-    if (!user) {
-      return;
-    }
-    response.topUsers.push(formatUser(user, count));
+    response.topUsers.push(formatUser(count.user, count));
   }
 
   res.json(response);
