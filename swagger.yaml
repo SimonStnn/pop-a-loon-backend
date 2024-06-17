@@ -266,6 +266,7 @@ paths:
                   rank:
                     type: integer
                     description: The position on the leaderboard of the user making the request
+                    nullable: true
                   topUsers:
                     type: array
                     items:
