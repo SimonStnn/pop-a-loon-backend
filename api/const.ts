@@ -9,6 +9,27 @@ export type MongooseDocumentType<T> = mongoose.Document<unknown, {}, T> &
     _id: mongoose.Types.ObjectId;
   };
 
+export type ResponseSchema = {
+  user: {
+    id: string;
+    username?: string;
+    email?: string;
+    count: number;
+    updatedAt: Date;
+    createdAt: Date;
+  };
+  config: {
+    spawnInterval: [number, number];
+    badge: {
+      color: string;
+      backgroundColor: string;
+    };
+  };
+  error: {
+    message: string;
+  };
+};
+
 declare module 'express' {
   export interface Request {
     jwt?: JWTSignature | undefined;

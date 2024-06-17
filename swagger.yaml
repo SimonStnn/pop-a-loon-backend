@@ -10,7 +10,7 @@ tags:
   - name: User
     description: User management
   - name: Config
-  - name: Leaderboard
+  - name: Statistics
 
 paths:
   /api/user/new:
@@ -21,7 +21,6 @@ paths:
       parameters:
         - in: query
           name: username
-          required: true
           schema:
             type: string
             description: The username of the user
@@ -207,6 +206,7 @@ paths:
                   version:
                     type: string
                     description: The version of the server
+                    example: '1.0.0'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -231,7 +231,7 @@ paths:
   /api/leaderboard:
     get:
       summary: Get the leaderboard
-      tags: [Leaderboard]
+      tags: [Statistics]
       security:
         - ApiKeyAuth: []
       parameters:
@@ -244,6 +244,14 @@ paths:
             maximum: 10
             default: 10
             description: The number of users to return
+        - in: query
+          name: skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            description: The number of users to skip
       responses:
         200:
           description: The leaderboard
@@ -258,6 +266,7 @@ paths:
                   rank:
                     type: integer
                     description: The position on the leaderboard of the user making the request
+                    nullable: true
                   topUsers:
                     type: array
                     items:
@@ -266,6 +275,30 @@ paths:
                   - 'topUsers'
         400:
           $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+  /api/statistics:
+    get:
+      summary: Get the statistics
+      tags: [Statistics]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalPopped:
+                    type: integer
+                    description: The total number of balloons popped
+                required:
+                  - 'totalPopped'
+
         401:
           $ref: '#/components/responses/Unauthorized'
         500:
