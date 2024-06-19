@@ -106,3 +106,44 @@ export const fetchTotalPopped = async (): Promise<number> => {
   console.log('Total popped fetched from MongoDB');
   return totalPopped;
 };
+
+export const fetchRank = async (
+  userCount: CountDocumentType,
+): Promise<number> => {
+  return (
+    (
+      (await Count.aggregate([
+        {
+          $lookup: {
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        { $unwind: '$user' },
+        {
+          $match: {
+            'user.username': { $exists: true, $ne: null },
+          },
+        },
+        {
+          $sort: {
+            count: -1,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            counts: { $push: '$count' },
+          },
+        },
+        {
+          $project: {
+            rank: { $indexOfArray: ['$counts', userCount.count] },
+          },
+        },
+      ]).exec()) as { rank: number }[]
+    )[0]?.rank + 1
+  );
+};
