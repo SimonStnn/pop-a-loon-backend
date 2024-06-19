@@ -9,6 +9,7 @@ const cache = new NodeCache();
 const cacheLocation = {
   leaderboard: 'leaderboard',
   totalPopped: 'totalPopped',
+  rank: 'rank',
 };
 
 export const validateEnv = () => {
@@ -110,7 +111,14 @@ export const fetchTotalPopped = async (): Promise<number> => {
 export const fetchRank = async (
   userCount: CountDocumentType,
 ): Promise<number> => {
-  return (
+  const cacheKey = `${cacheLocation.rank}-${userCount.id}`;
+
+  const cacheRank: number | undefined = cache.get(cacheKey);
+  if (cacheRank) {
+    return cacheRank;
+  }
+
+  const rank =
     (
       (await Count.aggregate([
         {
@@ -144,6 +152,9 @@ export const fetchRank = async (
           },
         },
       ]).exec()) as { rank: number }[]
-    )[0]?.rank + 1
-  );
+    )[0]?.rank + 1;
+
+  cache.set(cacheKey, rank, 60);
+
+  return rank;
 };
