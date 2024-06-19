@@ -1,0 +1,19 @@
+# Documentation
+
+## Entity Relationship Diagram
+
+```mermaid
+erDiagram
+USER ||--|| COUNT : ""
+USER {
+    string id PK
+    string name
+    string email
+    date updated_at
+}
+COUNT["COUNT (depricated)"] {
+    string id PK, FK
+    int count
+    date updated_at
+}
+```
