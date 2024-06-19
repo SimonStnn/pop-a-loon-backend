@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
-import { fetchLeaderboard, formatUser } from '../utils';
+import { fetchLeaderboard, fetchRank, formatUser } from '../utils';
 
 const router = express.Router();
 
@@ -30,32 +30,12 @@ router.get('/', async (req: Request, res: Response) => {
   // Get the top 10 users with the highest count
   const counts = await fetchLeaderboard(limit, skip);
 
-  // Get the position of the user in the database
-  const position = (
-    await Count.aggregate([
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      { $unwind: '$user' },
-      {
-        $match: {
-          'user.username': { $exists: true, $ne: null },
-          count: { $gt: userCount.count },
-        },
-      },
-    ])
-      .count('count')
-      .exec()
-  )[0].count;
+  // Get the rank of the user in the database
+  const rank: number = await fetchRank(userCount);
 
   const response = {
     user: formatUser(user, userCount, req.jwt!),
-    rank: user.username && position ? position + 1 : null,
+    rank: user.username && rank ? rank : null,
     topUsers: [] as ReturnType<typeof formatUser>[],
   };
   for (const count of counts) {
