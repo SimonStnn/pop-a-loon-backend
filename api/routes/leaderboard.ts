@@ -30,9 +30,9 @@ router.get('/', async (req: Request, res: Response) => {
   // Get the top 10 users with the highest count
   const counts = await fetchLeaderboard(limit, skip);
 
-  // Get the position of the user in the database
-  const position = (
-    await Count.aggregate([
+  // Get the rank of the user in the database
+  const rank: number = (
+    (await Count.aggregate([
       {
         $lookup: {
           from: 'users',
@@ -45,17 +45,32 @@ router.get('/', async (req: Request, res: Response) => {
       {
         $match: {
           'user.username': { $exists: true, $ne: null },
-          count: { $gt: userCount.count },
         },
       },
-    ])
-      .count('count')
-      .exec()
-  )[0].count;
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          counts: { $push: '$count' },
+        },
+      },
+      {
+        $project: {
+          rank: { $indexOfArray: ['$counts', userCount.count] },
+        },
+      },
+    ]).exec()) as { rank: number }[]
+  )[0]?.rank;
+
+  console.log('rank', rank);
 
   const response = {
     user: formatUser(user, userCount, req.jwt!),
-    rank: user.username && position ? position + 1 : null,
+    rank: user.username && rank ? rank + 1 : null,
     topUsers: [] as ReturnType<typeof formatUser>[],
   };
   for (const count of counts) {
