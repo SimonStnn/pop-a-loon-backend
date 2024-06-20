@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
+import CountHistory from '../schemas/counthistory';
 import { JWTSignature, ResponseSchema } from '../const';
 import { formatUser } from '../utils';
 
@@ -77,6 +78,9 @@ router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
   const count = await Count.findById(id);
+
+  const countHistory = new CountHistory({ user: id });
+  await countHistory.save();
 
   // Check if the user exists
   if (!count) {
