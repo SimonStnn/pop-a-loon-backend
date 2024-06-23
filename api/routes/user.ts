@@ -34,17 +34,25 @@ const getUserAndCount = async (
   res: Response,
 ): Promise<ResponseSchema['user']> => {
   const user = await User.findById(id);
-  const count = await Count.findById(id);
+  const count = await getUserCount(id, res);
 
   if (!user) {
     res.status(404).json({ error: 'User not found' });
     throw new Error('User not found');
-  } else if (!count) {
+  }
+
+  return formatUser(user, count, req.jwt!);
+};
+
+const getUserCount = async (id: string, res: Response) => {
+  const count = await Count.findById(id);
+
+  if (!count) {
     res.status(404).json({ error: 'Count not found' });
     throw new Error('Count not found');
   }
 
-  return formatUser(user, count, req.jwt!);
+  return count;
 };
 
 router.get('/', async (req: Request, res: Response) => {
@@ -60,21 +68,15 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
-  const count = await Count.findById(id);
-
-  // Check if the user exists
-  if (!count) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
 
   const countHistory = new CountHistory({ user: id });
   await countHistory.save();
 
+  const count = await getUserCount(id, res);
+
   res.json({
-    id: count.id,
+    id: id,
     count: count.count,
-    updatedAt: count.updatedAt,
   });
 });
 
@@ -104,13 +106,9 @@ router.put('/', async (req: Request, res: Response) => {
     { username, email },
     { new: true },
   );
-  const count = await Count.findById(id);
 
   if (!user) {
     res.status(404).json({ error: 'User not found' });
-    return;
-  } else if (!count) {
-    res.status(404).json({ error: 'Count not found' });
     return;
   }
 
@@ -118,7 +116,13 @@ router.put('/', async (req: Request, res: Response) => {
   await user.save();
 
   // Send the updated user and count documents
-  res.json(formatUser(user, count, req.jwt!) as ResponseSchema['user']);
+  res.json(
+    formatUser(
+      user,
+      await getUserCount(id, res),
+      req.jwt!,
+    ) as ResponseSchema['user'],
+  );
 });
 
 router.delete('/', async (req: Request, res: Response) => {
