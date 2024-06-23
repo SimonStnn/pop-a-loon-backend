@@ -38,7 +38,7 @@ export const testOrigin = (origin: string) => {
 
 export const formatUser = (
   user: UserDocumentType,
-  count: CountDocumentType,
+  count: Record<'count', number>,
   jwt?: JWTSignature,
 ): ResponseSchema['user'] => {
   return {
