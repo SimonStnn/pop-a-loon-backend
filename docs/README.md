@@ -5,6 +5,8 @@
 ```mermaid
 erDiagram
 USER ||--|| COUNT : ""
+USER ||--o{ COUNTHISTORY : ""
+
 USER {
     string id PK
     string name
@@ -15,5 +17,10 @@ COUNT["COUNT (depricated)"] {
     string id PK, FK
     int count
     date updated_at
+}
+COUNTHISTORY {
+    string id PK
+    string user FK
+    int type
 }
 ```
