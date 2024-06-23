@@ -45,12 +45,10 @@ const getUserAndCount = async (
 };
 
 const getUserCount = async (id: string, res: Response) => {
-  const count = await Count.findById(id);
+  const count = (await Count.findById(id)) || { count: 0 };
 
-  if (!count) {
-    res.status(404).json({ error: 'Count not found' });
-    throw new Error('Count not found');
-  }
+  // Get the number of documents in the count history collection
+  count.count += await CountHistory.countDocuments({ user: id });
 
   return count;
 };
