@@ -57,23 +57,6 @@ router.get('/:id', async (req: Request, res: Response) => {
   res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
 });
 
-router.get('/:id/count', async (req: Request, res: Response) => {
-  const id = req.params.id;
-
-  const user = await Count.findById(id);
-
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
-
-  res.json({
-    id: user.id,
-    count: user.count,
-    updatedAt: user.updatedAt,
-  });
-});
-
 router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
