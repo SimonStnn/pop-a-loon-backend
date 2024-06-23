@@ -79,18 +79,14 @@ router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
   const count = await Count.findById(id);
 
-  const countHistory = new CountHistory({ user: id });
-  await countHistory.save();
-
   // Check if the user exists
   if (!count) {
     res.status(404).json({ error: 'User not found' });
     return;
   }
 
-  // Increment the count and save the document
-  count.count++;
-  await count.save();
+  const countHistory = new CountHistory({ user: id });
+  await countHistory.save();
 
   res.json({
     id: count.id,
