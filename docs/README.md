@@ -4,7 +4,7 @@
 
 ```mermaid
 erDiagram
-USER ||--|| COUNT : ""
+USER ||--o| COUNT : ""
 USER ||--o{ COUNTHISTORY : ""
 
 USER {
