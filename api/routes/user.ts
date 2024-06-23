@@ -103,16 +103,11 @@ router.post('/new', async (req: Request, res: Response) => {
 
   // Save the user and create a count document
   await user.save();
-  // Get the count document
-  const count = await Count.findById(user.id);
-  if (!count) {
-    throw new Error('Something went wrong');
-  }
 
   // Send the user and count documents with token
   res.json({
     token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-    ...formatUser(user, count, req.jwt!),
+    ...formatUser(user, { count: 0 }, req.jwt),
   });
 });
 
