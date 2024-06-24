@@ -17,6 +17,9 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "prettier --write"
   },
+  "nodemonConfig": {
+    "ext": "js,json,yaml"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SimonStnn/pop-a-loon-backend.git"
