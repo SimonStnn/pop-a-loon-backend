@@ -26,6 +26,10 @@ export type UserDocumentType = MongooseDocumentType<User>;
 
 schema.pre('save', function (next) {
   const now = new Date();
+  if (this.isNew) {
+    const count = new Count({ _id: this._id });
+    count.save();
+  }
   this.updatedAt = now;
   next();
 });
