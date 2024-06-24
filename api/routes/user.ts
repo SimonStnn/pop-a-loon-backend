@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
-import { JWTSignature, ResponseSchema } from '../const';
+import { balloonTranslation, JWTSignature, ResponseSchema } from '../const';
 import { formatUser } from '../utils';
 
 const toManyRequestsResponse = { error: 'Too many requests' };
@@ -67,6 +67,10 @@ router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
   const count = await Count.findById(id);
+  const balloonType: keyof typeof balloonTranslation =
+    req.query.type && req.query.type?.toString() in balloonTranslation
+      ? (req.query.type.toString() as keyof typeof balloonTranslation)
+      : 'default';
 
   // Check if the user exists
   if (!count) {
@@ -74,7 +78,10 @@ router.post('/count/increment', async (req: Request, res: Response) => {
     return;
   }
 
-  const countHistory = new CountHistory({ user: id });
+  const countHistory = new CountHistory({
+    user: id,
+    type: balloonTranslation[balloonType],
+  });
   await countHistory.save();
 
   // Increment the count and save the document
