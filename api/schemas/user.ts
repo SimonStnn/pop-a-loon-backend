@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { MongooseDocumentType } from '../const';
-import Count from './count';
 
 export const name = 'users';
 
@@ -26,10 +25,6 @@ export type UserDocument = MongooseDocumentType<User>;
 
 schema.pre('save', function (next) {
   const now = new Date();
-  if (this.isNew) {
-    const count = new Count({ _id: this._id });
-    count.save();
-  }
   this.updatedAt = now;
   next();
 });

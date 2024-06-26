@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 
 import User from '../schemas/user';
-import Count from '../schemas/count';
 import {
   fetchLeaderboard,
   fetchRank,

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import mongoose, { mongo } from 'mongoose';
+import { mongo } from 'mongoose';
 import User, { type UserDocument } from './schemas/user';
 import Count, {
   name as countCollection,
