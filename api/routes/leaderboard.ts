@@ -2,7 +2,12 @@ import express, { Request, Response } from 'express';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
-import { fetchLeaderboard, fetchRank, formatUser } from '../utils';
+import {
+  fetchLeaderboard,
+  fetchRank,
+  formatUser,
+  getUserCount,
+} from '../utils';
 
 const router = express.Router();
 
@@ -19,11 +24,11 @@ router.get('/', async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Invalid skip, skip must be > 0' });
   }
 
-  const userId = req.jwt?.id;
+  const userId = req.jwt!.id;
   const user = await User.findById(userId).exec();
-  const userCount = await Count.findById(userId).exec();
+  const userCount = await getUserCount(userId, res);
 
-  if (!user || !userCount) {
+  if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
 
@@ -31,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
   const counts = await fetchLeaderboard(limit, skip);
 
   // Get the rank of the user in the database
-  const rank: number = await fetchRank(userCount);
+  const rank: number = await fetchRank(userId);
 
   const response = {
     user: formatUser(user, userCount, req.jwt!),

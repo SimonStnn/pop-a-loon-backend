@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
+import mongoose, { mongo } from 'mongoose';
 import User, { type UserDocument } from './schemas/user';
-import Count, { type CountDocument } from './schemas/count';
+import Count, {
+  name as countCollection,
+  type CountDocument,
+} from './schemas/count';
 import CountHistory from './schemas/counthistory';
 import { JWTSignature, ResponseSchema } from './const';
 
@@ -137,77 +141,72 @@ export const fetchTotalPopped = async (): Promise<number> => {
   return totalPopped;
 };
 
-export const fetchRank = async (userCount: CountDocument): Promise<number> => {
-  const cacheKey = `${cacheLocation.rank}-${userCount.id}`;
+export const fetchRank = async (id: string): Promise<number> => {
+  const cacheKey = `${cacheLocation.rank}-${id}`;
 
   const cacheRank: number | undefined = cache.get(cacheKey);
   if (cacheRank) {
     return cacheRank;
   }
 
-  const rank =
-    (
-      (await Count.aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'user',
+  const rank = (
+    (await CountHistory.aggregate([
+      {
+        $lookup: {
+          from: countCollection,
+          localField: 'user',
+          foreignField: '_id',
+          as: 'countDetails',
+        },
+      },
+      {
+        $unwind: {
+          path: '$countDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: '$user',
+          count: {
+            $sum: 1,
+          },
+          additionalCount: {
+            $first: '$countDetails.count',
           },
         },
-        { $unwind: '$user' },
-        {
-          $match: {
-            'user.username': { $exists: true, $ne: null },
+      },
+      {
+        $addFields: {
+          count: {
+            $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
           },
         },
-        // Join with CountHistory collection
-        {
-          $lookup: {
-            from: 'countHistory',
-            localField: 'user._id',
-            foreignField: 'userId',
-            as: 'countHistory',
+      },
+      {
+        $setWindowFields: {
+          partitionBy: null, // No partition to rank all users together
+          sortBy: { count: -1 },
+          output: {
+            rank: { $rank: {} },
           },
         },
-        // Calculate total count (Count.count + number of documents in CountHistory)
-        {
-          $addFields: {
-            totalCount: { $add: ['$count', { $size: '$countHistory' }] },
-          },
+      },
+      {
+        $match: {
+          _id: new mongo.ObjectId(id),
         },
-        // Sort by total count in descending order
-        {
-          $sort: {
-            totalCount: -1,
-          },
+      },
+      {
+        $project: {
+          _id: 0,
+          rank: 1,
         },
-        // Group and prepare for rank calculation
-        {
-          $group: {
-            _id: null,
-            counts: { $push: '$totalCount' },
-          },
-        },
-        // Project the rank
-        {
-          $project: {
-            rank: {
-              $indexOfArray: [
-                '$counts',
-                {
-                  $add: [
-                    userCount.count,
-                    { $size: (userCount as any).totalCount },
-                  ],
-                },
-              ],
-            },
-          },
-        },
-      ]).exec()) as { rank: number }[]
-    )[0]?.rank + 1;
+      },
+    ]).exec()) as { rank: number }[]
+  )[0]?.rank;
+
+  console.log('rank', rank);
 
   cache.set(cacheKey, rank, 60);
 
