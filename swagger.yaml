@@ -173,10 +173,6 @@ paths:
                   count:
                     type: integer
                     description: The user's count
-                  updatedAt:
-                    type: string
-                    format: date-time
-                    description: The date the user was last updated
         401:
           $ref: '#/components/responses/Unauthorized'
         404:
