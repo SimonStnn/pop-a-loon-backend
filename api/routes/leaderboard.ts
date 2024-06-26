@@ -36,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
   const counts = await fetchLeaderboard(limit, skip);
 
   // Get the rank of the user in the database
-  const rank: number = await fetchRank(userId);
+  const rank = await fetchRank(userId);
 
   const response = {
     user: formatUser(user, userCount, req.jwt!),

@@ -141,7 +141,7 @@ export const fetchTotalPopped = async (): Promise<number> => {
   return totalPopped;
 };
 
-export const fetchRank = async (id: string): Promise<number> => {
+export const fetchRank = async (id: string): Promise<number | null> => {
   const cacheKey = `${cacheLocation.rank}-${id}`;
 
   const cacheRank: number | undefined = cache.get(cacheKey);
@@ -206,9 +206,7 @@ export const fetchRank = async (id: string): Promise<number> => {
     ]).exec()) as { rank: number }[]
   )[0]?.rank;
 
-  console.log('rank', rank);
-
   cache.set(cacheKey, rank, 60);
 
-  return rank;
+  return rank ? rank : null;
 };
