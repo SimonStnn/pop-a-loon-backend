@@ -159,6 +159,8 @@ paths:
       tags: [User]
       security:
         - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/balloonType'
       responses:
         200:
           description: The updated user
@@ -173,10 +175,6 @@ paths:
                   count:
                     type: integer
                     description: The user's count
-                  updatedAt:
-                    type: string
-                    format: date-time
-                    description: The date the user was last updated
         401:
           $ref: '#/components/responses/Unauthorized'
         404:
@@ -313,6 +311,16 @@ components:
       description: 'The id of the user'
       schema:
         type: string
+    balloonType:
+      name: type
+      in: query
+      required: true
+      description: 'The type of the balloon'
+      schema:
+        type: string
+        enum:
+          - 'default'
+          - 'confetti'
 
   responses:
     BadRequest: # 400

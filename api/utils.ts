@@ -1,9 +1,15 @@
+import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import User, { type UserDocumentType } from './schemas/user';
-import Count, { type CountDocumentType } from './schemas/count';
+import { mongo } from 'mongoose';
+import User, { type UserDocument } from './schemas/user';
+import Count, {
+  name as countCollection,
+  type CountDocument,
+} from './schemas/count';
+import CountHistory from './schemas/counthistory';
 import { JWTSignature, ResponseSchema } from './const';
 
-type LeaderboardUser = CountDocumentType & { user: UserDocumentType };
+type LeaderboardUser = CountDocument & { user: UserDocument };
 
 const cache = new NodeCache();
 const cacheLocation = {
@@ -37,8 +43,8 @@ export const testOrigin = (origin: string) => {
 };
 
 export const formatUser = (
-  user: UserDocumentType,
-  count: CountDocumentType,
+  user: UserDocument,
+  count: Record<'count', number>,
   jwt?: JWTSignature,
 ): ResponseSchema['user'] => {
   return {
@@ -50,6 +56,31 @@ export const formatUser = (
     updatedAt: user.updatedAt,
     createdAt: user._id.getTimestamp(),
   };
+};
+
+export const getUserAndCount = async (
+  id: string,
+  req: Request,
+  res: Response,
+): Promise<ResponseSchema['user']> => {
+  const user = await User.findById(id);
+  const count = await getUserCount(id, res);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    throw new Error('User not found');
+  }
+
+  return formatUser(user, count, req.jwt!);
+};
+
+export const getUserCount = async (id: string, res: Response) => {
+  const count = (await Count.findById(id)) || { count: 0 };
+
+  // Get the number of documents in the count history collection
+  count.count += await CountHistory.countDocuments({ user: id });
+
+  return count;
 };
 
 export const fetchLeaderboard = async (
@@ -96,11 +127,13 @@ export const fetchTotalPopped = async (): Promise<number> => {
     return cachedTotalPopped;
   }
 
-  const totalPopped = (
+  const countSum: { total: number } = (
     await Count.aggregate([
       { $group: { _id: null, total: { $sum: '$count' } } },
     ]).exec()
-  )[0].total;
+  )[0];
+
+  const totalPopped = countSum.total + (await CountHistory.countDocuments());
 
   cache.set(cacheLocation.totalPopped, totalPopped, 5 * 60);
 
@@ -108,53 +141,72 @@ export const fetchTotalPopped = async (): Promise<number> => {
   return totalPopped;
 };
 
-export const fetchRank = async (
-  userCount: CountDocumentType,
-): Promise<number> => {
-  const cacheKey = `${cacheLocation.rank}-${userCount.id}`;
+export const fetchRank = async (id: string): Promise<number | null> => {
+  const cacheKey = `${cacheLocation.rank}-${id}`;
 
   const cacheRank: number | undefined = cache.get(cacheKey);
   if (cacheRank) {
     return cacheRank;
   }
 
-  const rank =
-    (
-      (await Count.aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'user',
+  const rank = (
+    (await CountHistory.aggregate([
+      {
+        $lookup: {
+          from: countCollection,
+          localField: 'user',
+          foreignField: '_id',
+          as: 'countDetails',
+        },
+      },
+      {
+        $unwind: {
+          path: '$countDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: '$user',
+          count: {
+            $sum: 1,
+          },
+          additionalCount: {
+            $first: '$countDetails.count',
           },
         },
-        { $unwind: '$user' },
-        {
-          $match: {
-            'user.username': { $exists: true, $ne: null },
+      },
+      {
+        $addFields: {
+          count: {
+            $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
           },
         },
-        {
-          $sort: {
-            count: -1,
+      },
+      {
+        $setWindowFields: {
+          partitionBy: null, // No partition to rank all users together
+          sortBy: { count: -1 },
+          output: {
+            rank: { $rank: {} },
           },
         },
-        {
-          $group: {
-            _id: null,
-            counts: { $push: '$count' },
-          },
+      },
+      {
+        $match: {
+          _id: new mongo.ObjectId(id),
         },
-        {
-          $project: {
-            rank: { $indexOfArray: ['$counts', userCount.count] },
-          },
+      },
+      {
+        $project: {
+          _id: 0,
+          rank: 1,
         },
-      ]).exec()) as { rank: number }[]
-    )[0]?.rank + 1;
+      },
+    ]).exec()) as { rank: number }[]
+  )[0]?.rank;
 
   cache.set(cacheKey, rank, 60);
 
-  return rank;
+  return rank ? rank : null;
 };
