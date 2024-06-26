@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { MongooseDocumentType } from '../const';
 
-export const name = 'Count';
+export const name = 'counts';
 
 export type Count = {
   count: number;

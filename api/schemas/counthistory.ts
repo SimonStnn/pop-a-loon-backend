@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { balloonTranslation, MongooseDocumentType } from '../const';
 
-export const name = 'CountHistory';
+export const name = 'counthistories';
 
 export type CountHistory = {
   user: mongoose.Schema.Types.ObjectId;

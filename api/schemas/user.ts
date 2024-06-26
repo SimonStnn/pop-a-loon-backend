@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { MongooseDocumentType } from '../const';
 import Count from './count';
 
-export const name = 'User';
+export const name = 'users';
 
 export type User = {
   username?: string;
