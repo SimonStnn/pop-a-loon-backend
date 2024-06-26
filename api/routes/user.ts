@@ -4,8 +4,9 @@ import rateLimit from 'express-rate-limit';
 
 import User from '../schemas/user';
 import Count from '../schemas/count';
-import { JWTSignature, ResponseSchema } from '../const';
-import { formatUser } from '../utils';
+import CountHistory from '../schemas/counthistory';
+import { balloonTranslation, JWTSignature, ResponseSchema } from '../const';
+import { formatUser, getUserAndCount, getUserCount } from '../utils';
 
 const toManyRequestsResponse = { error: 'Too many requests' };
 
@@ -27,71 +28,33 @@ const countLimiter = rateLimit({
 
 const router = express.Router();
 
-const getUserAndCount = async (
-  id: string,
-  req: Request,
-  res: Response,
-): Promise<ResponseSchema['user']> => {
-  const user = await User.findById(id);
-  const count = await Count.findById(id);
-
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    throw new Error('User not found');
-  } else if (!count) {
-    res.status(404).json({ error: 'Count not found' });
-    throw new Error('Count not found');
-  }
-
-  return formatUser(user, count, req.jwt!);
-};
-
 router.get('/', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
-  res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
+  res.json(await getUserAndCount(id, req, res));
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
-  res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
-});
-
-router.get('/:id/count', async (req: Request, res: Response) => {
-  const id = req.params.id;
-
-  const user = await Count.findById(id);
-
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
-
-  res.json({
-    id: user.id,
-    count: user.count,
-    updatedAt: user.updatedAt,
-  });
+  res.json(await getUserAndCount(id, req, res));
 });
 
 router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
-  const count = await Count.findById(id);
+  const balloonType: keyof typeof balloonTranslation =
+    req.query.type && req.query.type?.toString() in balloonTranslation
+      ? (req.query.type.toString() as keyof typeof balloonTranslation)
+      : 'default';
 
-  // Check if the user exists
-  if (!count) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
-
-  // Increment the count and save the document
-  count.count++;
-  await count.save();
+  const countHistory = new CountHistory({
+    user: id,
+    type: balloonTranslation[balloonType],
+  });
+  await countHistory.save();
 
   res.json({
-    id: count.id,
-    count: count.count,
-    updatedAt: count.updatedAt,
+    id: id,
+    count: (await getUserCount(id, res)).count,
   });
 });
 
@@ -103,16 +66,11 @@ router.post('/new', async (req: Request, res: Response) => {
 
   // Save the user and create a count document
   await user.save();
-  // Get the count document
-  const count = await Count.findById(user.id);
-  if (!count) {
-    throw new Error('Something went wrong');
-  }
 
   // Send the user and count documents with token
   res.json({
     token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-    ...formatUser(user, count, req.jwt!),
+    ...formatUser(user, { count: 0 }, req.jwt),
   });
 });
 
@@ -126,13 +84,9 @@ router.put('/', async (req: Request, res: Response) => {
     { username, email },
     { new: true },
   );
-  const count = await Count.findById(id);
 
   if (!user) {
     res.status(404).json({ error: 'User not found' });
-    return;
-  } else if (!count) {
-    res.status(404).json({ error: 'Count not found' });
     return;
   }
 
@@ -140,7 +94,13 @@ router.put('/', async (req: Request, res: Response) => {
   await user.save();
 
   // Send the updated user and count documents
-  res.json(formatUser(user, count, req.jwt!) as ResponseSchema['user']);
+  res.json(
+    formatUser(
+      user,
+      await getUserCount(id, res),
+      req.jwt!,
+    ) as ResponseSchema['user'],
+  );
 });
 
 router.delete('/', async (req: Request, res: Response) => {
