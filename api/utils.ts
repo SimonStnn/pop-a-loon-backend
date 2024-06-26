@@ -74,7 +74,7 @@ export const getUserCount = async (id: string, res: Response) => {
   const count = (await Count.findById(id)) || { count: 0 };
 
   // Get the number of documents in the count history collection
-  // count.count += await CountHistory.countDocuments({ user: id });
+  count.count += await CountHistory.countDocuments({ user: id });
 
   return count;
 };
@@ -162,20 +162,48 @@ export const fetchRank = async (userCount: CountDocument): Promise<number> => {
             'user.username': { $exists: true, $ne: null },
           },
         },
+        // Join with CountHistory collection
         {
-          $sort: {
-            count: -1,
+          $lookup: {
+            from: 'countHistory',
+            localField: 'user._id',
+            foreignField: 'userId',
+            as: 'countHistory',
           },
         },
+        // Calculate total count (Count.count + number of documents in CountHistory)
+        {
+          $addFields: {
+            totalCount: { $add: ['$count', { $size: '$countHistory' }] },
+          },
+        },
+        // Sort by total count in descending order
+        {
+          $sort: {
+            totalCount: -1,
+          },
+        },
+        // Group and prepare for rank calculation
         {
           $group: {
             _id: null,
-            counts: { $push: '$count' },
+            counts: { $push: '$totalCount' },
           },
         },
+        // Project the rank
         {
           $project: {
-            rank: { $indexOfArray: ['$counts', userCount.count] },
+            rank: {
+              $indexOfArray: [
+                '$counts',
+                {
+                  $add: [
+                    userCount.count,
+                    { $size: (userCount as any).totalCount },
+                  ],
+                },
+              ],
+            },
           },
         },
       ]).exec()) as { rank: number }[]
