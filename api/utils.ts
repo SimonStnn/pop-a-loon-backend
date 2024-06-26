@@ -1,3 +1,4 @@
+import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import User, { type UserDocumentType } from './schemas/user';
 import Count, { type CountDocumentType } from './schemas/count';
@@ -50,6 +51,31 @@ export const formatUser = (
     updatedAt: user.updatedAt,
     createdAt: user._id.getTimestamp(),
   };
+};
+
+export const getUserAndCount = async (
+  id: string,
+  req: Request,
+  res: Response,
+): Promise<ResponseSchema['user']> => {
+  const user = await User.findById(id);
+  const count = await getUserCount(id, res);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    throw new Error('User not found');
+  }
+
+  return formatUser(user, count, req.jwt!);
+};
+
+export const getUserCount = async (id: string, res: Response) => {
+  const count = (await Count.findById(id)) || { count: 0 };
+
+  // Get the number of documents in the count history collection
+  // count.count += await CountHistory.countDocuments({ user: id });
+
+  return count;
 };
 
 export const fetchLeaderboard = async (

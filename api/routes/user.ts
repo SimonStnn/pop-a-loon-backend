@@ -6,7 +6,7 @@ import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
 import { balloonTranslation, JWTSignature, ResponseSchema } from '../const';
-import { formatUser } from '../utils';
+import { formatUser, getUserAndCount, getUserCount } from '../utils';
 
 const toManyRequestsResponse = { error: 'Too many requests' };
 
@@ -28,39 +28,14 @@ const countLimiter = rateLimit({
 
 const router = express.Router();
 
-const getUserAndCount = async (
-  id: string,
-  req: Request,
-  res: Response,
-): Promise<ResponseSchema['user']> => {
-  const user = await User.findById(id);
-  const count = await getUserCount(id, res);
-
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    throw new Error('User not found');
-  }
-
-  return formatUser(user, count, req.jwt!);
-};
-
-const getUserCount = async (id: string, res: Response) => {
-  const count = (await Count.findById(id)) || { count: 0 };
-
-  // Get the number of documents in the count history collection
-  // count.count += await CountHistory.countDocuments({ user: id });
-
-  return count;
-};
-
 router.get('/', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
-  res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
+  res.json(await getUserAndCount(id, req, res));
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
-  res.json((await getUserAndCount(id, req, res)) as ResponseSchema['user']);
+  res.json(await getUserAndCount(id, req, res));
 });
 
 router.use('/count/increment', countLimiter);
