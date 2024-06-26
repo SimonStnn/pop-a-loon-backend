@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import User, { type UserDocument } from './schemas/user';
 import Count, { type CountDocument } from './schemas/count';
+import CountHistory from './schemas/counthistory';
 import { JWTSignature, ResponseSchema } from './const';
 
 type LeaderboardUser = CountDocument & { user: UserDocument };
@@ -122,11 +123,13 @@ export const fetchTotalPopped = async (): Promise<number> => {
     return cachedTotalPopped;
   }
 
-  const totalPopped = (
+  const countSum: { total: number } = (
     await Count.aggregate([
       { $group: { _id: null, total: { $sum: '$count' } } },
     ]).exec()
-  )[0].total;
+  )[0];
+
+  const totalPopped = countSum.total + (await CountHistory.countDocuments());
 
   cache.set(cacheLocation.totalPopped, totalPopped, 5 * 60);
 
