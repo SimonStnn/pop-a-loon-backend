@@ -24,7 +24,7 @@ export const schema = new mongoose.Schema({
     default: Date.now,
   },
 });
-export type CountDocumentType = MongooseDocumentType<Count>;
+export type CountDocument = MongooseDocumentType<Count>;
 
 schema.pre('save', function (next) {
   this.updatedAt = new Date();

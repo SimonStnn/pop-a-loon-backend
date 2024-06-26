@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import User, { type UserDocumentType } from './schemas/user';
-import Count, { type CountDocumentType } from './schemas/count';
+import User, { type UserDocument } from './schemas/user';
+import Count, { type CountDocument } from './schemas/count';
 import { JWTSignature, ResponseSchema } from './const';
 
-type LeaderboardUser = CountDocumentType & { user: UserDocumentType };
+type LeaderboardUser = CountDocument & { user: UserDocument };
 
 const cache = new NodeCache();
 const cacheLocation = {
@@ -38,7 +38,7 @@ export const testOrigin = (origin: string) => {
 };
 
 export const formatUser = (
-  user: UserDocumentType,
+  user: UserDocument,
   count: Record<'count', number>,
   jwt?: JWTSignature,
 ): ResponseSchema['user'] => {
@@ -134,9 +134,7 @@ export const fetchTotalPopped = async (): Promise<number> => {
   return totalPopped;
 };
 
-export const fetchRank = async (
-  userCount: CountDocumentType,
-): Promise<number> => {
+export const fetchRank = async (userCount: CountDocument): Promise<number> => {
   const cacheKey = `${cacheLocation.rank}-${userCount.id}`;
 
   const cacheRank: number | undefined = cache.get(cacheKey);

@@ -22,7 +22,7 @@ export const schema = new mongoose.Schema({
     default: Date.now,
   },
 });
-export type UserDocumentType = MongooseDocumentType<User>;
+export type UserDocument = MongooseDocumentType<User>;
 
 schema.pre('save', function (next) {
   const now = new Date();
