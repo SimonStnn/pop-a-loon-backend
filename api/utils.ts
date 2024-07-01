@@ -2,14 +2,16 @@ import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import { mongo } from 'mongoose';
 import User, { type UserDocument } from './schemas/user';
-import Count, {
-  name as countCollection,
-  type CountDocument,
-} from './schemas/count';
-import CountHistory from './schemas/counthistory';
-import { JWTSignature, ResponseSchema } from './const';
+import Count, { name as countCollection } from './schemas/count';
+import CountHistory, { CountHistoryDocument } from './schemas/counthistory';
+import { JWTSignature, MongooseDocumentType, ResponseSchema } from './const';
 
-type LeaderboardUser = CountDocument & { user: UserDocument };
+type LeaderboardUser = MongooseDocumentType<{
+  count: number;
+  additionalCount: number;
+  rank: number;
+  user: UserDocument;
+}>;
 
 const cache = new NodeCache();
 const cacheLocation = {
@@ -94,7 +96,50 @@ export const fetchLeaderboard = async (
     return cachedLoaderboard;
   }
 
-  const counts: LeaderboardUser[] = await Count.aggregate([
+  const counts: LeaderboardUser[] = await CountHistory.aggregate([
+    {
+      $lookup: {
+        from: 'counts',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'countDetails',
+      },
+    },
+    {
+      $unwind: {
+        path: '$countDetails',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $group: {
+        _id: '$user',
+        count: {
+          $sum: 1,
+        },
+        additionalCount: {
+          $first: '$countDetails.count',
+        },
+      },
+    },
+    {
+      $addFields: {
+        count: {
+          $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
+        },
+      },
+    },
+    {
+      $setWindowFields: {
+        partitionBy: null, // No partition to rank all users together
+        sortBy: { count: -1 },
+        output: {
+          rank: { $rank: {} },
+        },
+      },
+    },
+    { $skip: 0 },
+    { $limit: 10 },
     {
       $lookup: {
         from: 'users',
@@ -103,16 +148,13 @@ export const fetchLeaderboard = async (
         as: 'user',
       },
     },
-    { $unwind: '$user' },
-    { $match: { 'user.username': { $exists: true, $ne: null } } },
-    { $sort: { count: -1 } },
-    { $skip: skip },
-    { $limit: limit },
+    {
+      $unwind: {
+        path: '$user',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   ]);
-
-  counts.forEach((count) => {
-    count.user = User.hydrate(count.user);
-  });
 
   cache.set(cacheKey, counts, 60);
   return counts;
