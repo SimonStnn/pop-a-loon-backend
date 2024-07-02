@@ -138,8 +138,8 @@ export const fetchLeaderboard = async (
         },
       },
     },
-    { $skip: 0 },
-    { $limit: 10 },
+    { $skip: skip },
+    { $limit: limit },
     {
       $lookup: {
         from: 'users',
