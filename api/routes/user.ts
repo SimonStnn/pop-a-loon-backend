@@ -1,12 +1,17 @@
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
-
+import { query, param, matchedData, validationResult } from 'express-validator';
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
 import { balloonTranslation, JWTSignature, ResponseSchema } from '../const';
-import { formatUser, getUserAndCount, getUserCount } from '../utils';
+import {
+  formatUser,
+  getUserAndCount,
+  getUserCount,
+  validation,
+} from '../utils';
 
 const toManyRequestsResponse = { error: 'Too many requests' };
 
@@ -33,10 +38,20 @@ router.get('/', async (req: Request, res: Response) => {
   res.json(await getUserAndCount(id, req, res));
 });
 
-router.get('/:id', async (req: Request, res: Response) => {
-  const id = req.params.id;
-  res.json(await getUserAndCount(id, req, res));
-});
+router.get(
+  '/:id',
+  param('id').isString().trim().custom(validation.objectId),
+  async (req: Request, res: Response) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      res.status(400).json({ error: 'Invalid user ID' });
+      return;
+    }
+    const data = matchedData(req);
+    const id = data.id;
+    res.json(await getUserAndCount(id, req, res));
+  },
+);
 
 router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
@@ -59,49 +74,69 @@ router.post('/count/increment', async (req: Request, res: Response) => {
 });
 
 router.use('/new', newUserLimiter);
-router.post('/new', async (req: Request, res: Response) => {
-  const { username, email } = req.query;
+router.post(
+  '/new',
+  validation.username(query('username')),
+  query('email').isEmail().normalizeEmail(),
+  async (req: Request, res: Response) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      res.status(400).json({ error: 'Invalid username or email' });
+      return;
+    }
+    const { username, email } = matchedData(req);
 
-  const user = new User({ username, email });
+    const user = new User({ username, email });
 
-  // Save the user and create a count document
-  await user.save();
+    // Save the user and create a count document
+    await user.save();
 
-  // Send the user and count documents with token
-  res.json({
-    token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-    ...formatUser(user, { count: 0 }, req.jwt),
-  });
-});
+    // Send the user and count documents with token
+    res.json({
+      token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
+      ...formatUser(user, { count: 0 }, req.jwt),
+    });
+  },
+);
 
-router.put('/', async (req: Request, res: Response) => {
-  const id = req.jwt!.id;
-  const { username, email } = req.query;
+router.put(
+  '/',
+  validation.username(query('username')),
+  query('email').isEmail().normalizeEmail(),
+  async (req: Request, res: Response) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      res.status(400).json({ error: 'Invalid username or email' });
+      return;
+    }
+    const id = req.jwt!.id;
+    const { username, email } = matchedData(req);
 
-  // Update the user and count document
-  const user = await User.findByIdAndUpdate(
-    id,
-    { username, email },
-    { new: true },
-  );
+    // Update the user and count document
+    const user = await User.findByIdAndUpdate(
+      id,
+      { username, email },
+      { new: true },
+    );
 
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
 
-  // Save the user document
-  await user.save();
+    // Save the user document
+    await user.save();
 
-  // Send the updated user and count documents
-  res.json(
-    formatUser(
-      user,
-      await getUserCount(id, res),
-      req.jwt!,
-    ) as ResponseSchema['user'],
-  );
-});
+    // Send the updated user and count documents
+    res.json(
+      formatUser(
+        user,
+        await getUserCount(id, res),
+        req.jwt!,
+      ) as ResponseSchema['user'],
+    );
+  },
+);
 
 router.delete('/', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
