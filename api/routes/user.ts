@@ -5,8 +5,13 @@ import rateLimit from 'express-rate-limit';
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
-import { balloonTranslation, JWTSignature, ResponseSchema } from '../const';
-import { formatUser, getUserAndCount, getUserCount } from '../utils';
+import { JWTSignature, ResponseSchema } from '../const';
+import {
+  fetchBalloonType,
+  formatUser,
+  getUserAndCount,
+  getUserCount,
+} from '../utils';
 
 const toManyRequestsResponse = { error: 'Too many requests' };
 
@@ -41,14 +46,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.use('/count/increment', countLimiter);
 router.post('/count/increment', async (req: Request, res: Response) => {
   const id = req.jwt!.id;
-  const balloonType: keyof typeof balloonTranslation =
-    req.query.type && req.query.type?.toString() in balloonTranslation
-      ? (req.query.type.toString() as keyof typeof balloonTranslation)
-      : 'default';
+  const balloonType = await fetchBalloonType(
+    (req.query.type as string).toString().toLowerCase(),
+  );
 
   const countHistory = new CountHistory({
     user: id,
-    type: balloonTranslation[balloonType],
+    type: balloonType.id,
   });
   await countHistory.save();
 
