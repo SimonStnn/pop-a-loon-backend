@@ -5,7 +5,7 @@ export const name = 'counthistories';
 
 export type CountHistory = {
   user: mongoose.Schema.Types.ObjectId;
-  type: number;
+  type: mongoose.Schema.Types.ObjectId;
 };
 
 export const schema = new mongoose.Schema<CountHistory>({
@@ -14,7 +14,7 @@ export const schema = new mongoose.Schema<CountHistory>({
     required: true,
   },
   type: {
-    type: Number,
+    type: mongoose.Schema.Types.ObjectId,
     default: 0,
   },
 });
