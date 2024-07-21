@@ -14,7 +14,6 @@ import { JWTSignature, MongooseDocumentType, ResponseSchema } from './const';
 type LeaderboardUser = MongooseDocumentType<{
   count: number;
   additionalCount: number;
-  rank: number;
   user: UserDocument;
 }>;
 
@@ -148,9 +147,7 @@ export const fetchLeaderboard = async (
       $setWindowFields: {
         partitionBy: null, // No partition to rank all users together
         sortBy: { count: -1 },
-        output: {
-          rank: { $rank: {} },
-        },
+        output: {},
       },
     },
     { $skip: skip },
@@ -167,6 +164,11 @@ export const fetchLeaderboard = async (
       $unwind: {
         path: '$user',
         preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: {
+        'user.username': { $ne: null },
       },
     },
   ]);
