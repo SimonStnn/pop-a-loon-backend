@@ -1,7 +1,13 @@
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
-import { query, param, matchedData, validationResult } from 'express-validator';
+import {
+  query,
+  param,
+  matchedData,
+  validationResult,
+  body,
+} from 'express-validator';
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
@@ -101,12 +107,19 @@ router.post(
 
 router.put(
   '/',
-  validation.username(query('username')),
-  query('email').isEmail().normalizeEmail(),
+  validation.username(query('username')).optional(),
+  query('email').optional().isEmail().normalizeEmail(),
+  body().custom((value, { req }) => {
+    const { username, email } = req.query ?? {};
+    if (!username && !email) {
+      throw new Error('At least one of username or email must be provided');
+    }
+    return true;
+  }),
   async (req: Request, res: Response) => {
     const result = validationResult(req);
     if (!result.isEmpty()) {
-      res.status(400).json({ error: 'Invalid username or email' });
+      res.status(400).json({ error: result.array() });
       return;
     }
     const id = req.jwt!.id;
