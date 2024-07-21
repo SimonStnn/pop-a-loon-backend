@@ -35,8 +35,3 @@ declare module 'express' {
     jwt?: JWTSignature | undefined;
   }
 }
-
-export const balloonTranslation = {
-  default: 0x00,
-  confetti: 0x01,
-};

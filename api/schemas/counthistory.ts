@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
-import { balloonTranslation, MongooseDocumentType } from '../const';
+import { MongooseDocumentType } from '../const';
 
 export const name = 'counthistories';
 
 export type CountHistory = {
   user: mongoose.Schema.Types.ObjectId;
-  type: number;
+  type: mongoose.Schema.Types.ObjectId;
 };
 
 export const schema = new mongoose.Schema<CountHistory>({
@@ -14,8 +14,8 @@ export const schema = new mongoose.Schema<CountHistory>({
     required: true,
   },
   type: {
-    type: Number,
-    default: balloonTranslation.default,
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
   },
 });
 export type CountHistoryDocument = MongooseDocumentType<CountHistory>;

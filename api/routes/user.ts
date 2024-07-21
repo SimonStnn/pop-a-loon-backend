@@ -11,8 +11,9 @@ import {
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
-import { balloonTranslation, JWTSignature, ResponseSchema } from '../const';
+import { JWTSignature, ResponseSchema } from '../const';
 import {
+  fetchBalloonType,
   formatUser,
   getUserAndCount,
   getUserCount,
@@ -60,24 +61,38 @@ router.get(
 );
 
 router.use('/count/increment', countLimiter);
-router.post('/count/increment', async (req: Request, res: Response) => {
-  const id = req.jwt!.id;
-  const balloonType: keyof typeof balloonTranslation =
-    req.query.type && req.query.type?.toString() in balloonTranslation
-      ? (req.query.type.toString() as keyof typeof balloonTranslation)
-      : 'default';
+router.post(
+  '/count/increment',
+  query('type')
+    .isString()
+    .customSanitizer(async (input: string, { req }) => {
+      const balloonType = await fetchBalloonType(input);
+      if (!balloonType) {
+        throw new Error('Invalid balloon type');
+      }
+      return balloonType;
+    }),
+  async (req: Request, res: Response) => {
+    const id = req.jwt!.id;
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      res.status(400).json({ error: result.array() });
+      return;
+    }
+    const { type } = matchedData(req);
 
-  const countHistory = new CountHistory({
-    user: id,
-    type: balloonTranslation[balloonType],
-  });
-  await countHistory.save();
+    const countHistory = new CountHistory({
+      user: id,
+      type: type.id,
+    });
+    await countHistory.save();
 
-  res.json({
-    id: id,
-    count: (await getUserCount(id, res)).count,
-  });
-});
+    res.json({
+      id: id,
+      count: (await getUserCount(id, res)).count,
+    });
+  },
+);
 
 router.use('/new', newUserLimiter);
 router.post(

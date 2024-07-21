@@ -4,6 +4,10 @@ import mongoose, { mongo } from 'mongoose';
 import { query, ValidationChain } from 'express-validator';
 import User, { type UserDocument } from './schemas/user';
 import Count, { name as countCollection } from './schemas/count';
+import Balloon, {
+  name as baloonCollection,
+  BalloonDocument,
+} from './schemas/balloon';
 import CountHistory, { CountHistoryDocument } from './schemas/counthistory';
 import { JWTSignature, MongooseDocumentType, ResponseSchema } from './const';
 
@@ -262,4 +266,24 @@ export const fetchRank = async (id: string): Promise<number | null> => {
   cache.set(cacheKey, rank, 60);
 
   return rank ? rank : null;
+};
+
+export const fetchBalloonType = async (
+  name: string,
+): Promise<BalloonDocument> => {
+  const cacheKey = `${baloonCollection}-${name}`;
+
+  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
+  if (cachedBalloon) {
+    return cachedBalloon;
+  }
+
+  const balloon: BalloonDocument | null = await Balloon.findOne({ name });
+  if (!balloon) {
+    throw new Error('Balloon not found');
+  }
+
+  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
+
+  return balloon;
 };
