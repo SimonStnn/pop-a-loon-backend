@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import { mongo } from 'mongoose';
+import mongoose, { mongo } from 'mongoose';
+import { query, ValidationChain } from 'express-validator';
 import User, { type UserDocument } from './schemas/user';
 import Count, { name as countCollection } from './schemas/count';
 import Balloon, {
@@ -46,6 +47,16 @@ export const testOrigin = (origin: string) => {
     origin === 'chrome-extension://pahcoancbdjmffpmfbnjablnabomdocp' ||
     origin.startsWith('moz-extension://')
   );
+};
+
+export const validation = {
+  username: (chain: ValidationChain) =>
+    chain
+      .isString()
+      .trim()
+      .isLength({ min: 4, max: 20 })
+      .matches(/^[a-zA-Z0-9_]+$/),
+  objectId: (id: string) => mongoose.Types.ObjectId.isValid(id),
 };
 
 export const formatUser = (

@@ -15,7 +15,7 @@ export const schema = new mongoose.Schema<CountHistory>({
   },
   type: {
     type: mongoose.Schema.Types.ObjectId,
-    default: 0,
+    required: true,
   },
 });
 export type CountHistoryDocument = MongooseDocumentType<CountHistory>;
