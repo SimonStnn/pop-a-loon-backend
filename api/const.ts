@@ -30,6 +30,11 @@ export type ResponseSchema = {
   };
 };
 
+export type HistoryNode = {
+  date: Date;
+  count: number;
+};
+
 declare module 'express' {
   export interface Request {
     jwt?: JWTSignature | undefined;
