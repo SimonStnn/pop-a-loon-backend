@@ -52,6 +52,7 @@ export const testOrigin = (origin: string) => {
 export const validation = {
   username: (chain: ValidationChain) =>
     chain
+      .optional()
       .isString()
       .trim()
       .isLength({ min: 4, max: 20 })
