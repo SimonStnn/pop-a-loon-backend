@@ -287,3 +287,18 @@ export const fetchBalloonType = async (
 
   return balloon;
 };
+
+export const fetchHistory = async (startDate: Date, endDate: Date) => {
+  // Convert startDate and endDate to their equivalent ObjectId representations
+  const startObjectId =
+    Math.floor(startDate.getTime() / 1000).toString(16) + '0000000000000000';
+  const endObjectId =
+    Math.floor(endDate.getTime() / 1000).toString(16) + 'ffffffffffffffff';
+
+  return await CountHistory.find({
+    _id: {
+      $gte: startObjectId,
+      $lte: endObjectId,
+    },
+  }).exec();
+};
