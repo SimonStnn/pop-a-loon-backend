@@ -295,8 +295,6 @@ export const fetchBalloonName = async (id: string): Promise<string> => {
     return cachedBalloon.name;
   }
 
-  console.log('fetching');
-
   const balloon = await Balloon.findById(id);
   if (!balloon) {
     throw new Error('Balloon not found');
