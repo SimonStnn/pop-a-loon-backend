@@ -288,6 +288,24 @@ export const fetchBalloonType = async (
   return balloon;
 };
 
+export const fetchBalloonName = async (id: string): Promise<string> => {
+  const cacheKey = `${baloonCollection}-${id}`;
+  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
+  if (cachedBalloon) {
+    return cachedBalloon.name;
+  }
+
+  console.log('fetching');
+
+  const balloon = await Balloon.findById(id);
+  if (!balloon) {
+    throw new Error('Balloon not found');
+  }
+
+  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
+  return balloon.name;
+};
+
 export const fetchHistory = async (startDate: Date, endDate: Date) => {
   // Convert startDate and endDate to their equivalent ObjectId representations
   const startObjectId =
