@@ -21,8 +21,8 @@ router.get(
       return res.status(400).json({ error: 'Invalid query parameters' });
     }
     const data = matchedData(req) as { limit?: number; skip?: number };
-    const limit = data.limit || 10;
-    const skip = data.skip || 0;
+    const limit = Number(data.limit) || 10;
+    const skip = Number(data.skip) || 0;
     const userId = req.jwt!.id;
     const user = await User.findById(userId).exec();
     const userCount = await getUserCount(userId, res);
