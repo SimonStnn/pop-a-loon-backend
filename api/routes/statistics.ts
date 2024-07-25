@@ -6,6 +6,7 @@ import {
   fetchTotalPopped,
 } from '../utils';
 import { matchedData, query, validationResult } from 'express-validator';
+import { HistoryNode } from '@/const';
 
 const router = express.Router();
 
@@ -51,11 +52,36 @@ router.get(
       types.push(await fetchBalloonName(type));
     }
 
+    const filledData: HistoryNode[] = [];
+    for (
+      let currentDate = new Date(startDate);
+      currentDate <= endDate;
+      currentDate.setDate(currentDate.getDate() + 1)
+    ) {
+      // Get the data in history with the same day as currentDate
+      const currentData = history.filter((node) => {
+        const date = node._id.getTimestamp();
+        return (
+          date.getDate() === currentDate.getDate() &&
+          date.getMonth() === currentDate.getMonth() &&
+          date.getFullYear() === currentDate.getFullYear()
+        );
+      });
+
+      const fill: { [key: string]: number } = {};
+      for (const node of currentData) {
+        const balloonName = types[uniqueTypes.indexOf(node.type.toString())];
+        fill[balloonName] = fill[balloonName] ? fill[balloonName] + 1 : 1;
+      }
+
+      filledData.push({
+        date: new Date(currentDate),
+        pops: fill,
+      });
+    }
+
     res.json({
-      history: history.map((node) => ({
-        date: node._id.getTimestamp(),
-        type: types[uniqueTypes.indexOf(node.type.toString())],
-      })),
+      history: filledData,
     });
   },
 );
