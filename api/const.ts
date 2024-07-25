@@ -32,7 +32,9 @@ export type ResponseSchema = {
 
 export type HistoryNode = {
   date: Date;
-  count: number;
+  pops: {
+    [key: string]: number;
+  };
 };
 
 declare module 'express' {
