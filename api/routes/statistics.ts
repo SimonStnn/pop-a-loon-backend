@@ -42,7 +42,7 @@ router.get(
     const startDate = new Date(data['start-date']);
     const endDate = new Date(data['end-date'] ?? new Date());
 
-    const history = await fetchHistory(startDate, endDate);
+    const history = await fetchHistory(req.jwt!.id, startDate, endDate);
 
     const uniqueTypes = [
       ...new Set(history.map((node) => node.type.toString())),

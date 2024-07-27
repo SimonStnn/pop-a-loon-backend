@@ -310,7 +310,11 @@ export const fetchBalloonName = async (id: string): Promise<string> => {
   return balloon.name;
 };
 
-export const fetchHistory = async (startDate: Date, endDate: Date) => {
+export const fetchHistory = async (
+  id: string,
+  startDate: Date,
+  endDate: Date,
+) => {
   // Convert startDate and endDate to their equivalent ObjectId representations
   const startObjectId =
     Math.floor(startDate.getTime() / 1000).toString(16) + '0000000000000000';
@@ -322,5 +326,6 @@ export const fetchHistory = async (startDate: Date, endDate: Date) => {
       $gte: startObjectId,
       $lte: endObjectId,
     },
+    user: id,
   }).exec();
 };
