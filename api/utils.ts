@@ -146,17 +146,6 @@ export const fetchLeaderboard = async (
       },
     },
     {
-      $setWindowFields: {
-        partitionBy: null, // No partition to rank all users together
-        sortBy: { count: -1 },
-        output: {
-          rank: { $rank: {} },
-        },
-      },
-    },
-    { $skip: skip },
-    { $limit: limit },
-    {
       $lookup: {
         from: 'users',
         localField: '_id',
@@ -170,6 +159,22 @@ export const fetchLeaderboard = async (
         preserveNullAndEmptyArrays: true,
       },
     },
+    {
+      $match: {
+        'user.username': { $ne: null },
+      },
+    },
+    {
+      $setWindowFields: {
+        partitionBy: null, // No partition to rank all users together
+        sortBy: { count: -1 },
+        output: {
+          rank: { $rank: {} },
+        },
+      },
+    },
+    { $skip: skip },
+    { $limit: limit },
   ]);
 
   cache.set(cacheKey, counts, 60);
