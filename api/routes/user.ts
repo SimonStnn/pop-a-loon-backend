@@ -45,6 +45,32 @@ router.get('/', async (req: Request, res: Response) => {
   res.json(await getUserAndCount(id, req, res));
 });
 
+router.use('/new', newUserLimiter);
+router.post(
+  '/new',
+  validation.username(query('username')),
+  query('email').optional().isEmail().normalizeEmail(),
+  async (req: Request, res: Response) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      res.status(400).json({ error: result.array() });
+      return;
+    }
+    const { username, email } = matchedData(req);
+
+    const user = new User({ username, email });
+
+    // Save the user and create a count document
+    await user.save();
+
+    // Send the user and count documents with token
+    res.json({
+      token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
+      ...formatUser(user, { count: 0 }, req.jwt),
+    });
+  },
+);
+
 router.get(
   '/:id',
   param('id').isString().trim().custom(validation.objectId),
@@ -90,32 +116,6 @@ router.post(
     res.json({
       id: id,
       count: (await getUserCount(id, res)).count,
-    });
-  },
-);
-
-router.use('/new', newUserLimiter);
-router.post(
-  '/new',
-  validation.username(query('username')),
-  query('email').isEmail().normalizeEmail(),
-  async (req: Request, res: Response) => {
-    const result = validationResult(req);
-    if (!result.isEmpty()) {
-      res.status(400).json({ error: 'Invalid username or email' });
-      return;
-    }
-    const { username, email } = matchedData(req);
-
-    const user = new User({ username, email });
-
-    // Save the user and create a count document
-    await user.save();
-
-    // Send the user and count documents with token
-    res.json({
-      token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
-      ...formatUser(user, { count: 0 }, req.jwt),
     });
   },
 );
