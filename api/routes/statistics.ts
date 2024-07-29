@@ -30,6 +30,7 @@ router.get(
       return true;
     }),
   query('end-date').optional().isISO8601(),
+  query('id').optional().isMongoId(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -38,11 +39,13 @@ router.get(
     const data = matchedData(req) as {
       'start-date': string;
       'end-date'?: string;
+      id?: string;
     };
     const startDate = new Date(data['start-date']);
     const endDate = new Date(data['end-date'] ?? new Date());
+    const id = data.id === req.jwt!.id ? data.id : undefined;
 
-    const history = await fetchHistory(req.jwt!.id, startDate, endDate);
+    const history = await fetchHistory(startDate, endDate, id);
 
     const uniqueTypes = [
       ...new Set(history.map((node) => node.type.toString())),

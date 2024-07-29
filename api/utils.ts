@@ -311,9 +311,9 @@ export const fetchBalloonName = async (id: string): Promise<string> => {
 };
 
 export const fetchHistory = async (
-  id: string,
   startDate: Date,
   endDate: Date,
+  id?: string,
 ) => {
   // Convert startDate and endDate to their equivalent ObjectId representations
   const startObjectId =
