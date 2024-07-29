@@ -323,6 +323,12 @@ paths:
             type: string
             format: date-time
             description: The end date of the history
+        - in: query
+          name: id
+          required: false
+          schema:
+            type: string
+            description: Id of your user to only get your history
       responses:
         200:
           description: OK
