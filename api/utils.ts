@@ -293,3 +293,39 @@ export const fetchBalloonType = async (
 
   return balloon;
 };
+
+export const fetchBalloonName = async (id: string): Promise<string> => {
+  const cacheKey = `${baloonCollection}-${id}`;
+  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
+  if (cachedBalloon) {
+    return cachedBalloon.name;
+  }
+
+  const balloon = await Balloon.findById(id);
+  if (!balloon) {
+    throw new Error('Balloon not found');
+  }
+
+  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
+  return balloon.name;
+};
+
+export const fetchHistory = async (
+  startDate: Date,
+  endDate: Date,
+  id?: string,
+) => {
+  // Convert startDate and endDate to their equivalent ObjectId representations
+  const startObjectId =
+    Math.floor(startDate.getTime() / 1000).toString(16) + '0000000000000000';
+  const endObjectId =
+    Math.floor(endDate.getTime() / 1000).toString(16) + 'ffffffffffffffff';
+
+  return await CountHistory.find({
+    _id: {
+      $gte: startObjectId,
+      $lte: endObjectId,
+    },
+    user: id,
+  }).exec();
+};

@@ -301,6 +301,37 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         500:
           $ref: '#/components/responses/InternalServerError'
+  /api/statistics/history:
+    get:
+      description: Get the pop history of the user
+      tags: [Statistics]
+      security:
+        - ApiKeyAuth: []
+      parameters: 
+        - in: query
+          name: start-date
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: The start date of the history
+            default: '2024-07-01T00:00:00.000Z'
+        - in: query
+          name: end-date
+          required: false
+          schema:
+            type: string
+            format: date-time
+            description: The end date of the history
+        - in: query
+          name: id
+          required: false
+          schema:
+            type: string
+            description: Id of your user to only get your history
+      responses:
+        200:
+          description: OK
 
 components:
   parameters:
