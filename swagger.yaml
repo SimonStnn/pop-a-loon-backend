@@ -307,7 +307,7 @@ paths:
       tags: [Statistics]
       security:
         - ApiKeyAuth: []
-      parameters: 
+      parameters:
         - in: query
           name: start-date
           required: true
@@ -331,7 +331,14 @@ paths:
             description: Id of your user to only get your history
       responses:
         200:
-          description: OK
+          description: The pop history between the start and end date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryNode'
+          
 
 components:
   parameters:
@@ -468,6 +475,23 @@ components:
         - count
         - updatedAt
         - createdAt
+    HistoryNode:
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: The date the balloon was popped
+        pops:
+          type: object
+          properties:
+            # key is the name of the balloon, value is the number of pops
+            [key: string]:
+              type: integer
+              description: The number of pops of this balloon type
+              minimum: 0
+      required:
+        - date
+        - pops
     Error:
       properties:
         error:
