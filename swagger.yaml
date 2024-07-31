@@ -341,6 +341,30 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/HistoryNode'
+  /api/statistics/scores:
+    get:
+      summary: Get the amount of popped balloons per type
+      tags: [Statistics]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The amount of popped balloons per type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scores:
+                    type: object
+                    description: The amount of popped balloons per type
+                    additionalProperties:
+                      type: integer
+                      description: The score of the user
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   parameters:

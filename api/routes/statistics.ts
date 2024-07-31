@@ -1,8 +1,8 @@
 import express, { Request, Response } from 'express';
 import {
   fetchBalloonName,
-  fetchBalloonType,
   fetchHistory,
+  fetchScores,
   fetchTotalPopped,
 } from '../utils';
 import { matchedData, query, validationResult } from 'express-validator';
@@ -88,5 +88,14 @@ router.get(
     });
   },
 );
+
+router.get('/scores', async (req: Request, res: Response) => {
+  const id = req.jwt!.id;
+  const scores = await fetchScores(id.toString());
+
+  res.json({
+    scores,
+  });
+});
 
 export default router;
