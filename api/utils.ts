@@ -2,7 +2,11 @@ import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import mongoose, { mongo } from 'mongoose';
 import { query, ValidationChain } from 'express-validator';
-import User, { type UserDocument } from './schemas/user';
+import User, {
+  name,
+  name as userCollection,
+  type UserDocument,
+} from './schemas/user';
 import Count, { name as countCollection } from './schemas/count';
 import Balloon, {
   name as baloonCollection,
@@ -328,4 +332,43 @@ export const fetchHistory = async (
     },
     user: id,
   }).exec();
+};
+
+export const fetchScores = async (id: string) => {
+  const rawScores = (await CountHistory.aggregate([
+    {
+      $lookup: {
+        from: userCollection,
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    {
+      $unwind: {
+        path: '$user',
+      },
+    },
+    {
+      $match: {
+        'user._id': new mongoose.Types.ObjectId(id),
+      },
+    },
+    {
+      $group: {
+        _id: '$type',
+        count: {
+          $sum: 1,
+        },
+      },
+    },
+  ]).exec()) as { _id: string; count: number }[];
+
+  const scores = [];
+  for (const score of rawScores) {
+    const name = await fetchBalloonName(score._id);
+    scores.push({ name, count: score.count });
+  }
+
+  return scores;
 };
