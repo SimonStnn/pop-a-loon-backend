@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '21'
+
+      - name: Install GitHub CLI
+        run: |
+          sudo type -p curl >/dev/null || (sudo apt update && sudo apt install -y curl)
+          sudo curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "VERSION=$(node -p -e "require('./package.json').version")" >> $GITHUB_ENV
+
+      # Doesn't use actions/create-release@v1 and actions/upload-release-asset@v1 ebcause it doesn't support uploading multiple assets
+
+      - name: Create Release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          tag_name="test_v${{ env.VERSION }}"
+          gh release create --generate-notes --latest "$tag_name"
