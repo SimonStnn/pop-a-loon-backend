@@ -233,6 +233,25 @@ export const fetchRank = async (id: string): Promise<number | null> => {
         },
       },
       {
+        $lookup: {
+          from: userCollection,
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: {
+          'user.username': { $ne: null },
+        },
+      },
+      {
         $group: {
           _id: '$user',
           count: {
