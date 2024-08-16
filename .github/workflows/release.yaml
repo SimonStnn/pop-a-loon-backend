@@ -8,6 +8,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
 
     steps:
       - name: Checkout code
@@ -36,8 +39,8 @@ jobs:
       - name: Create Release
         id: create_release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
-          tag_name="test_v${{ env.VERSION }}"
+          tag_name="v${{ env.VERSION }}"
           gh release create --generate-notes --latest "$tag_name"
