@@ -280,7 +280,7 @@ export const fetchRank = async (id: string): Promise<number | null> => {
       },
       {
         $match: {
-          '_id._id': new mongo.ObjectId(id),
+          '_id._id': new mongoose.Types.ObjectId(id),
         },
       },
       {
