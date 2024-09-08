@@ -119,7 +119,7 @@ export const fetchLeaderboard = async (
   const counts: LeaderboardUser[] = await CountHistory.aggregate([
     {
       $lookup: {
-        from: 'counts',
+        from: countCollection,
         localField: 'user',
         foreignField: '_id',
         as: 'countDetails',
@@ -129,6 +129,25 @@ export const fetchLeaderboard = async (
       $unwind: {
         path: '$countDetails',
         preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: userCollection,
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    {
+      $unwind: {
+        path: '$user',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: {
+        'user.username': { $ne: null },
       },
     },
     {
@@ -150,35 +169,40 @@ export const fetchLeaderboard = async (
       },
     },
     {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'user',
+      $sort: { count: -1 },
+    },
+    {
+      $group: {
+        _id: null,
+        users: {
+          $push: {
+            user: '$_id',
+            count: '$count',
+          },
+        },
       },
     },
     {
       $unwind: {
-        path: '$user',
-        preserveNullAndEmptyArrays: true,
+        path: '$users',
+        includeArrayIndex: 'rank',
       },
     },
     {
-      $match: {
-        'user.username': { $ne: null },
-      },
-    },
-    {
-      $setWindowFields: {
-        partitionBy: null, // No partition to rank all users together
-        sortBy: { count: -1 },
-        output: {
-          rank: { $rank: {} },
+      $replaceRoot: {
+        newRoot: {
+          user: '$users.user',
+          count: '$users.count',
+          rank: { $add: ['$rank', 1] },
         },
       },
     },
-    { $skip: skip },
-    { $limit: limit },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: limit,
+    },
   ]);
 
   cache.set(cacheKey, counts, 60);
