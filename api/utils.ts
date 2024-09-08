@@ -270,17 +270,37 @@ export const fetchRank = async (id: string): Promise<number | null> => {
         },
       },
       {
-        $setWindowFields: {
-          partitionBy: null, // No partition to rank all users together
-          sortBy: { count: -1 },
-          output: {
-            rank: { $rank: {} },
+        $sort: { count: -1 },
+      },
+      {
+        $group: {
+          _id: null,
+          users: {
+            $push: {
+              user: '$_id',
+              count: '$count',
+            },
+          },
+        },
+      },
+      {
+        $unwind: {
+          path: '$users',
+          includeArrayIndex: 'rank',
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            user: '$users.user',
+            count: '$users.count',
+            rank: { $add: ['$rank', 1] },
           },
         },
       },
       {
         $match: {
-          '_id._id': new mongoose.Types.ObjectId(id),
+          'user._id': new mongoose.Types.ObjectId(id),
         },
       },
       {
