@@ -25,17 +25,18 @@ router.get(
     const skip = Number(data.skip) || 0;
     const userId = req.jwt!.id;
     const user = await User.findById(userId).exec();
-    const userCount = await getUserCount(userId, res);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get the top 10 users with the highest count
-    const counts = await fetchLeaderboard(limit, skip);
-
-    // Get the rank of the user in the database
-    const rank = await fetchRank(userId);
+    const [userCount, counts, rank] = await Promise.all([
+      getUserCount(userId, res),
+      // Get the top 10 users with the highest count
+      fetchLeaderboard(limit, skip),
+      // Get the rank of the user in the database
+      fetchRank(userId),
+    ]);
 
     const response = {
       user: formatUser(user, userCount, req.jwt!),
