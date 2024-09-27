@@ -70,7 +70,7 @@ export const formatUser = (
   jwt?: JWTSignature,
 ): ResponseSchema['user'] => {
   return {
-    id: user.id,
+    id: user.id || user._id.toString(),
     username: user.username,
     email:
       jwt?.id !== undefined && jwt?.id === user.id ? user.email : undefined,
