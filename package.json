@@ -1,6 +1,6 @@
 {
   "name": "pop-a-loon-backend",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "Backend RESTfull API for Pop-a-loon",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
