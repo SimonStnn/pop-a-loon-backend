@@ -393,7 +393,7 @@ export const fetchHistory = async (
       $gte: startObjectId,
       $lte: endObjectId,
     },
-    user: id,
+    ...(id ? { user: id } : {}),
   }).exec();
 };
 
