@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import mongoose, { mongo } from 'mongoose';
-import { query, ValidationChain } from 'express-validator';
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import { ValidationChain } from 'express-validator';
 import User, {
-  name,
   name as userCollection,
   type UserDocument,
 } from './schemas/user';
@@ -12,7 +12,7 @@ import Balloon, {
   name as baloonCollection,
   BalloonDocument,
 } from './schemas/balloon';
-import CountHistory, { CountHistoryDocument } from './schemas/counthistory';
+import CountHistory from './schemas/counthistory';
 import { JWTSignature, MongooseDocumentType, ResponseSchema } from './const';
 
 type LeaderboardUser = MongooseDocumentType<{
@@ -62,6 +62,10 @@ export const validation = {
       .isLength({ min: 4, max: 20 })
       .matches(/^[a-zA-Z0-9_]+$/),
   objectId: (id: string) => mongoose.Types.ObjectId.isValid(id),
+};
+
+export const generateToken = (id: string): string => {
+  return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!);
 };
 
 export const formatUser = (
@@ -393,7 +397,7 @@ export const fetchHistory = async (
       $gte: startObjectId,
       $lte: endObjectId,
     },
-    user: id,
+    ...(id ? { user: id } : {}),
   }).exec();
 };
 
