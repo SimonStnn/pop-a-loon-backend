@@ -122,32 +122,52 @@ export const fetchLeaderboard = async (
 
   const counts: LeaderboardUser[] = await CountHistory.aggregate([
     {
+      $group: {
+        _id: {
+          user: '$user',
+          type: '$type',
+        },
+        popCount: {
+          $sum: 1,
+        },
+      },
+    },
+    {
       $lookup: {
-        from: countCollection,
-        localField: 'user',
+        from: 'balloons',
+        localField: '_id.type',
         foreignField: '_id',
-        as: 'countDetails',
+        as: 'balloonDetails',
       },
     },
     {
-      $unwind: {
-        path: '$countDetails',
-        preserveNullAndEmptyArrays: true,
+      $unwind: '$balloonDetails',
+    },
+    {
+      $addFields: {
+        count: {
+          $multiply: ['$popCount', '$balloonDetails.value'],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: '$_id.user',
+        count: {
+          $sum: '$count',
+        },
       },
     },
     {
       $lookup: {
-        from: userCollection,
-        localField: 'user',
+        from: 'users',
+        localField: '_id',
         foreignField: '_id',
         as: 'user',
       },
     },
     {
-      $unwind: {
-        path: '$user',
-        preserveNullAndEmptyArrays: true,
-      },
+      $unwind: '$user',
     },
     {
       $match: {
@@ -155,50 +175,26 @@ export const fetchLeaderboard = async (
       },
     },
     {
-      $group: {
-        _id: '$user',
-        count: {
-          $sum: 1,
-        },
-        additionalCount: {
-          $first: '$countDetails.count',
-        },
+      $lookup: {
+        from: 'counts',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'userCount',
       },
     },
     {
       $addFields: {
-        count: {
-          $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
-        },
+        userCount: { $arrayElemAt: ['$userCount.count', 0] },
       },
     },
     {
-      $sort: { count: -1 },
-    },
-    {
-      $group: {
-        _id: null,
-        users: {
-          $push: {
-            user: '$_id',
-            count: '$count',
-          },
-        },
+      $addFields: {
+        count: { $add: ['$count', { $ifNull: ['$userCount', 0] }] },
       },
     },
     {
-      $unwind: {
-        path: '$users',
-        includeArrayIndex: 'rank',
-      },
-    },
-    {
-      $replaceRoot: {
-        newRoot: {
-          user: '$users.user',
-          count: '$users.count',
-          rank: { $add: ['$rank', 1] },
-        },
+      $sort: {
+        count: -1,
       },
     },
     {
@@ -237,112 +233,113 @@ export const fetchTotalPopped = async (): Promise<number> => {
 };
 
 export const fetchRank = async (id: string): Promise<number | null> => {
-  const cacheKey = `${cacheLocation.rank}-${id}`;
+  return null;
+  // const cacheKey = `${cacheLocation.rank}-${id}`;
 
-  const cacheRank: number | undefined = cache.get(cacheKey);
-  if (cacheRank) {
-    return cacheRank;
-  }
+  // const cacheRank: number | undefined = cache.get(cacheKey);
+  // if (cacheRank) {
+  //   return cacheRank;
+  // }
 
-  const rank = (
-    (await CountHistory.aggregate([
-      {
-        $lookup: {
-          from: countCollection,
-          localField: 'user',
-          foreignField: '_id',
-          as: 'countDetails',
-        },
-      },
-      {
-        $unwind: {
-          path: '$countDetails',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: userCollection,
-          localField: 'user',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      {
-        $unwind: {
-          path: '$user',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $match: {
-          'user.username': { $ne: null },
-        },
-      },
-      {
-        $group: {
-          _id: '$user',
-          count: {
-            $sum: 1,
-          },
-          additionalCount: {
-            $first: '$countDetails.count',
-          },
-        },
-      },
-      {
-        $addFields: {
-          count: {
-            $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
-          },
-        },
-      },
-      {
-        $sort: { count: -1 },
-      },
-      {
-        $group: {
-          _id: null,
-          users: {
-            $push: {
-              user: '$_id',
-              count: '$count',
-            },
-          },
-        },
-      },
-      {
-        $unwind: {
-          path: '$users',
-          includeArrayIndex: 'rank',
-        },
-      },
-      {
-        $replaceRoot: {
-          newRoot: {
-            user: '$users.user',
-            count: '$users.count',
-            rank: { $add: ['$rank', 1] },
-          },
-        },
-      },
-      {
-        $match: {
-          'user._id': new mongoose.Types.ObjectId(id),
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          rank: 1,
-        },
-      },
-    ]).exec()) as { rank: number }[]
-  )[0]?.rank;
+  // const rank = (
+  //   (await CountHistory.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: countCollection,
+  //         localField: 'user',
+  //         foreignField: '_id',
+  //         as: 'countDetails',
+  //       },
+  //     },
+  //     {
+  //       $unwind: {
+  //         path: '$countDetails',
+  //         preserveNullAndEmptyArrays: true,
+  //       },
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: userCollection,
+  //         localField: 'user',
+  //         foreignField: '_id',
+  //         as: 'user',
+  //       },
+  //     },
+  //     {
+  //       $unwind: {
+  //         path: '$user',
+  //         preserveNullAndEmptyArrays: true,
+  //       },
+  //     },
+  //     {
+  //       $match: {
+  //         'user.username': { $ne: null },
+  //       },
+  //     },
+  //     {
+  //       $group: {
+  //         _id: '$user',
+  //         count: {
+  //           $sum: 1,
+  //         },
+  //         additionalCount: {
+  //           $first: '$countDetails.count',
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $addFields: {
+  //         count: {
+  //           $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $sort: { count: -1 },
+  //     },
+  //     {
+  //       $group: {
+  //         _id: null,
+  //         users: {
+  //           $push: {
+  //             user: '$_id',
+  //             count: '$count',
+  //           },
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $unwind: {
+  //         path: '$users',
+  //         includeArrayIndex: 'rank',
+  //       },
+  //     },
+  //     {
+  //       $replaceRoot: {
+  //         newRoot: {
+  //           user: '$users.user',
+  //           count: '$users.count',
+  //           rank: { $add: ['$rank', 1] },
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $match: {
+  //         'user._id': new mongoose.Types.ObjectId(id),
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         rank: 1,
+  //       },
+  //     },
+  //   ]).exec()) as { rank: number }[]
+  // )[0]?.rank;
 
-  cache.set(cacheKey, rank, 60);
+  // cache.set(cacheKey, rank, 60);
 
-  return rank ? rank : null;
+  // return rank ? rank : null;
 };
 
 export const fetchBalloonType = async (
