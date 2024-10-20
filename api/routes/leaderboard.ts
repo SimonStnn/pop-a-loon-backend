@@ -1,12 +1,7 @@
 import express, { Request, Response } from 'express';
 
 import User from '../schemas/user';
-import {
-  fetchLeaderboard,
-  fetchRank,
-  formatUser,
-  getUserCount,
-} from '../utils';
+import { fetchLeaderboard, formatUser, getUserCount } from '../utils';
 import { matchedData, query, validationResult } from 'express-validator';
 
 const router = express.Router();
@@ -30,24 +25,18 @@ router.get(
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const [userCount, counts, rank] = await Promise.all([
+    const [userCount, counts] = await Promise.all([
       getUserCount(userId, res),
       // Get the top 10 users with the highest count
-      fetchLeaderboard(limit, skip),
-      // Get the rank of the user in the database
-      fetchRank(userId),
+      fetchLeaderboard(limit, skip, userId),
     ]);
-
-    const response = {
+    return res.json({
       user: formatUser(user, userCount, req.jwt!),
-      rank: user.username && rank ? rank : null,
-      topUsers: [] as ReturnType<typeof formatUser>[],
-    };
-    for (const count of counts) {
-      response.topUsers.push(formatUser(count.user, count));
-    }
-
-    res.json(response);
+      topUsers: counts.leaderboard.map((count) =>
+        formatUser(count.user, count),
+      ),
+      rank: counts.userRank[0]?.rank ?? null,
+    });
   },
 );
 

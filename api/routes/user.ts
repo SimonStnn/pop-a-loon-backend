@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import {
   query,
@@ -11,10 +10,11 @@ import {
 import User from '../schemas/user';
 import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
-import { JWTSignature, ResponseSchema } from '../const';
+import { ResponseSchema } from '../const';
 import {
   fetchBalloonType,
   formatUser,
+  generateToken,
   getUserAndCount,
   getUserCount,
   validation,
@@ -65,7 +65,7 @@ router.post(
 
     // Send the user and count documents with token
     res.json({
-      token: jwt.sign({ id: user.id } as JWTSignature, process.env.JWT_SECRET!),
+      token: generateToken(user.id),
       ...formatUser(user, { count: 0 }, req.jwt),
     });
   },

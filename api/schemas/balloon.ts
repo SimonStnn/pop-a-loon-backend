@@ -5,11 +5,16 @@ export const name = 'balloons';
 
 export type Balloon = {
   name: string;
+  value: number;
 };
 
 export const schema = new mongoose.Schema<Balloon>({
   name: {
     type: String,
+    required: true,
+  },
+  value: {
+    type: Number,
     required: true,
   },
 });
