@@ -112,98 +112,157 @@ export const getUserCount = async (id: string, res: Response) => {
 export const fetchLeaderboard = async (
   limit: number,
   skip: number,
-): Promise<LeaderboardUser[]> => {
+  userId: string,
+): Promise<{
+  leaderboard: LeaderboardUser[];
+  userRank: { rank: number }[];
+}> => {
   const cacheKey = `${cacheLocation.leaderboard}-${limit}-${skip}`;
 
-  const cachedLoaderboard: LeaderboardUser[] | undefined = cache.get(cacheKey);
+  const cachedLoaderboard:
+    | {
+        leaderboard: LeaderboardUser[];
+        userRank: { rank: number }[];
+      }
+    | undefined = cache.get(cacheKey);
   if (cachedLoaderboard) {
     return cachedLoaderboard;
   }
 
-  const counts: LeaderboardUser[] = await CountHistory.aggregate([
-    {
-      $group: {
-        _id: {
-          user: '$user',
-          type: '$type',
-        },
-        popCount: {
-          $sum: 1,
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: 'balloons',
-        localField: '_id.type',
-        foreignField: '_id',
-        as: 'balloonDetails',
-      },
-    },
-    {
-      $unwind: '$balloonDetails',
-    },
-    {
-      $addFields: {
-        count: {
-          $multiply: ['$popCount', '$balloonDetails.value'],
+  const counts: {
+    leaderboard: LeaderboardUser[];
+    userRank: { rank: number }[];
+  } = (
+    await CountHistory.aggregate([
+      {
+        $group: {
+          _id: {
+            user: '$user',
+            type: '$type',
+          },
+          popCount: {
+            $sum: 1,
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: '$_id.user',
-        count: {
-          $sum: '$count',
+      {
+        $lookup: {
+          from: 'balloons',
+          localField: '_id.type',
+          foreignField: '_id',
+          as: 'balloonDetails',
         },
       },
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'user',
+      {
+        $unwind: '$balloonDetails',
       },
-    },
-    {
-      $unwind: '$user',
-    },
-    {
-      $match: {
-        'user.username': { $ne: null },
+      {
+        $addFields: {
+          count: {
+            $multiply: ['$popCount', '$balloonDetails.value'],
+          },
+        },
       },
-    },
-    {
-      $lookup: {
-        from: 'counts',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'userCount',
+      {
+        $group: {
+          _id: '$_id.user',
+          count: {
+            $sum: '$count',
+          },
+        },
       },
-    },
-    {
-      $addFields: {
-        userCount: { $arrayElemAt: ['$userCount.count', 0] },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user',
+        },
       },
-    },
-    {
-      $addFields: {
-        count: { $add: ['$count', { $ifNull: ['$userCount', 0] }] },
+      {
+        $unwind: '$user',
       },
-    },
-    {
-      $sort: {
-        count: -1,
+      {
+        $match: {
+          'user.username': {
+            $ne: null,
+          },
+        },
       },
-    },
-    {
-      $skip: skip,
-    },
-    {
-      $limit: limit,
-    },
-  ]);
+      {
+        $lookup: {
+          from: 'counts',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'userCount',
+        },
+      },
+      {
+        $addFields: {
+          userCount: {
+            $arrayElemAt: ['$userCount.count', 0],
+          },
+        },
+      },
+      {
+        $addFields: {
+          count: {
+            $add: [
+              '$count',
+              {
+                $ifNull: ['$userCount', 0],
+              },
+            ],
+          },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          users: {
+            $push: {
+              user: '$user',
+              count: '$count',
+            },
+          },
+        },
+      },
+      {
+        $unwind: {
+          path: '$users',
+          includeArrayIndex: 'rank',
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            user: '$users.user',
+            count: '$users.count',
+            rank: {
+              $add: ['$rank', 1],
+            },
+          },
+        },
+      },
+      {
+        $facet: {
+          leaderboard: [
+            { $skip: skip }, // only return the requested number of documents
+            { $limit: limit },
+          ],
+          userRank: [
+            { $match: { user: new mongoose.Types.ObjectId(userId) } },
+            { $project: { rank: 1 } },
+          ],
+        },
+      },
+    ])
+  )[0];
 
   cache.set(cacheKey, counts, 60);
   return counts;
@@ -230,116 +289,6 @@ export const fetchTotalPopped = async (): Promise<number> => {
 
   console.log('Total popped fetched from MongoDB');
   return totalPopped;
-};
-
-export const fetchRank = async (id: string): Promise<number | null> => {
-  return null;
-  // const cacheKey = `${cacheLocation.rank}-${id}`;
-
-  // const cacheRank: number | undefined = cache.get(cacheKey);
-  // if (cacheRank) {
-  //   return cacheRank;
-  // }
-
-  // const rank = (
-  //   (await CountHistory.aggregate([
-  //     {
-  //       $lookup: {
-  //         from: countCollection,
-  //         localField: 'user',
-  //         foreignField: '_id',
-  //         as: 'countDetails',
-  //       },
-  //     },
-  //     {
-  //       $unwind: {
-  //         path: '$countDetails',
-  //         preserveNullAndEmptyArrays: true,
-  //       },
-  //     },
-  //     {
-  //       $lookup: {
-  //         from: userCollection,
-  //         localField: 'user',
-  //         foreignField: '_id',
-  //         as: 'user',
-  //       },
-  //     },
-  //     {
-  //       $unwind: {
-  //         path: '$user',
-  //         preserveNullAndEmptyArrays: true,
-  //       },
-  //     },
-  //     {
-  //       $match: {
-  //         'user.username': { $ne: null },
-  //       },
-  //     },
-  //     {
-  //       $group: {
-  //         _id: '$user',
-  //         count: {
-  //           $sum: 1,
-  //         },
-  //         additionalCount: {
-  //           $first: '$countDetails.count',
-  //         },
-  //       },
-  //     },
-  //     {
-  //       $addFields: {
-  //         count: {
-  //           $sum: ['$count', { $ifNull: ['$additionalCount', 0] }],
-  //         },
-  //       },
-  //     },
-  //     {
-  //       $sort: { count: -1 },
-  //     },
-  //     {
-  //       $group: {
-  //         _id: null,
-  //         users: {
-  //           $push: {
-  //             user: '$_id',
-  //             count: '$count',
-  //           },
-  //         },
-  //       },
-  //     },
-  //     {
-  //       $unwind: {
-  //         path: '$users',
-  //         includeArrayIndex: 'rank',
-  //       },
-  //     },
-  //     {
-  //       $replaceRoot: {
-  //         newRoot: {
-  //           user: '$users.user',
-  //           count: '$users.count',
-  //           rank: { $add: ['$rank', 1] },
-  //         },
-  //       },
-  //     },
-  //     {
-  //       $match: {
-  //         'user._id': new mongoose.Types.ObjectId(id),
-  //       },
-  //     },
-  //     {
-  //       $project: {
-  //         _id: 0,
-  //         rank: 1,
-  //       },
-  //     },
-  //   ]).exec()) as { rank: number }[]
-  // )[0]?.rank;
-
-  // cache.set(cacheKey, rank, 60);
-
-  // return rank ? rank : null;
 };
 
 export const fetchBalloonType = async (
