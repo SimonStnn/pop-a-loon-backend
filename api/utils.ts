@@ -256,7 +256,7 @@ export const fetchLeaderboard = async (
             { $limit: limit },
           ],
           userRank: [
-            { $match: { user: new mongoose.Types.ObjectId(userId) } },
+            { $match: { 'user._id': new mongoose.Types.ObjectId(userId) } },
             { $project: { rank: 1 } },
           ],
         },
