@@ -26,7 +26,7 @@ router.get(
     }
 
     const [userCount, counts] = await Promise.all([
-      getUserCount(userId, res),
+      getUserCount(userId),
       // Get the top 10 users with the highest count
       fetchLeaderboard(limit, skip, userId),
     ]);
