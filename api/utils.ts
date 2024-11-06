@@ -9,7 +9,7 @@ import User, {
 } from './schemas/user';
 import Count, { name as countCollection } from './schemas/count';
 import Balloon, {
-  name as baloonCollection,
+  name as balloonCollection,
   BalloonDocument,
 } from './schemas/balloon';
 import CountHistory from './schemas/counthistory';
@@ -90,7 +90,7 @@ export const getUserAndCount = async (
   res: Response,
 ): Promise<ResponseSchema['user']> => {
   const user = await User.findById(id);
-  const count = await getUserCount(id, res);
+  const count = await getUserCount(id);
 
   if (!user) {
     res.status(404).json({ error: 'User not found' });
@@ -100,11 +100,78 @@ export const getUserAndCount = async (
   return formatUser(user, count, req.jwt!);
 };
 
-export const getUserCount = async (id: string, res: Response) => {
-  const count = (await Count.findById(id)) || { count: 0 };
-
-  // Get the number of documents in the count history collection
-  count.count += await CountHistory.countDocuments({ user: id });
+export const getUserCount = async (id: string) => {
+  const count: {
+    count: number;
+  } = (
+    await CountHistory.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(id),
+        },
+      },
+      {
+        $group: {
+          _id: {
+            user: '$user',
+            type: '$type',
+          },
+          popCount: {
+            $sum: 1,
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: balloonCollection,
+          localField: '_id.type',
+          foreignField: '_id',
+          as: 'balloonDetails',
+        },
+      },
+      {
+        $unwind: '$balloonDetails',
+      },
+      {
+        $addFields: {
+          count: {
+            $multiply: ['$popCount', '$balloonDetails.value'],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          user: {
+            $first: '$_id.user',
+          },
+          count: {
+            $sum: '$count',
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: countCollection,
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userCount',
+        },
+      },
+      {
+        $addFields: {
+          count: {
+            $add: [
+              '$count',
+              {
+                $ifNull: [{ $arrayElemAt: ['$userCount.count', 0] }, 0],
+              },
+            ],
+          },
+        },
+      },
+    ])
+  )[0];
 
   return count;
 };
@@ -147,7 +214,7 @@ export const fetchLeaderboard = async (
       },
       {
         $lookup: {
-          from: 'balloons',
+          from: balloonCollection,
           localField: '_id.type',
           foreignField: '_id',
           as: 'balloonDetails',
@@ -173,7 +240,7 @@ export const fetchLeaderboard = async (
       },
       {
         $lookup: {
-          from: 'users',
+          from: userCollection,
           localField: '_id',
           foreignField: '_id',
           as: 'user',
@@ -191,17 +258,10 @@ export const fetchLeaderboard = async (
       },
       {
         $lookup: {
-          from: 'counts',
+          from: countCollection,
           localField: '_id',
           foreignField: '_id',
           as: 'userCount',
-        },
-      },
-      {
-        $addFields: {
-          userCount: {
-            $arrayElemAt: ['$userCount.count', 0],
-          },
         },
       },
       {
@@ -210,7 +270,7 @@ export const fetchLeaderboard = async (
             $add: [
               '$count',
               {
-                $ifNull: ['$userCount', 0],
+                $ifNull: [{ $arrayElemAt: ['$userCount.count', 0] }, 0],
               },
             ],
           },
@@ -256,7 +316,7 @@ export const fetchLeaderboard = async (
             { $limit: limit },
           ],
           userRank: [
-            { $match: { user: new mongoose.Types.ObjectId(userId) } },
+            { $match: { 'user._id': new mongoose.Types.ObjectId(userId) } },
             { $project: { rank: 1 } },
           ],
         },
@@ -294,7 +354,7 @@ export const fetchTotalPopped = async (): Promise<number> => {
 export const fetchBalloonType = async (
   name: string,
 ): Promise<BalloonDocument> => {
-  const cacheKey = `${baloonCollection}-${name}`;
+  const cacheKey = `${balloonCollection}-${name}`;
 
   const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
   if (cachedBalloon) {
@@ -312,7 +372,7 @@ export const fetchBalloonType = async (
 };
 
 export const fetchBalloonName = async (id: string): Promise<string> => {
-  const cacheKey = `${baloonCollection}-${id}`;
+  const cacheKey = `${balloonCollection}-${id}`;
   const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
   if (cachedBalloon) {
     return cachedBalloon.name;

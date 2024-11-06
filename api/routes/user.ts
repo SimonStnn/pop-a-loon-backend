@@ -115,7 +115,7 @@ router.post(
 
     res.json({
       id: id,
-      count: (await getUserCount(id, res)).count,
+      count: (await getUserCount(id)).count,
     });
   },
 );
@@ -159,7 +159,7 @@ router.put(
     res.json(
       formatUser(
         user,
-        await getUserCount(id, res),
+        await getUserCount(id),
         req.jwt!,
       ) as ResponseSchema['user'],
     );
