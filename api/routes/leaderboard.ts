@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.get(
   '/',
-  query('limit').isInt({ min: 1, max: 10 }).optional(),
+  query('limit').isInt({ min: 1, max: 100 }).optional(),
   query('skip').isInt({ min: 0 }).optional(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
