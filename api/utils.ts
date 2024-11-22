@@ -171,7 +171,7 @@ export const getUserCount = async (id: string) => {
         },
       },
     ])
-  )[0];
+  )[0] ?? { count: 0 };
 
   return count;
 };
