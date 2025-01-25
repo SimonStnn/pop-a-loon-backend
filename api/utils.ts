@@ -23,11 +23,11 @@ type LeaderboardUser = MongooseDocumentType<{
 }>;
 
 const cache = new NodeCache();
-const cacheLocation = {
-  leaderboard: 'leaderboard',
-  totalPopped: 'totalPopped',
-  rank: 'rank',
-};
+enum CacheLocation {
+  LEADERBOARD,
+  TOTAL_POPPED,
+  RANK,
+}
 
 export const validateEnv = () => {
   if (!process.env.DATABASE_URL) {
@@ -184,7 +184,7 @@ export const fetchLeaderboard = async (
   leaderboard: LeaderboardUser[];
   userRank: { rank: number }[];
 }> => {
-  const cacheKey = `${cacheLocation.leaderboard}-${limit}-${skip}`;
+  const cacheKey = `${CacheLocation.LEADERBOARD}-${limit}-${skip}`;
 
   const cachedLoaderboard:
     | {
@@ -330,7 +330,7 @@ export const fetchLeaderboard = async (
 
 export const fetchTotalPopped = async (): Promise<number> => {
   const cachedTotalPopped: number | undefined = cache.get(
-    cacheLocation.totalPopped,
+    CacheLocation.TOTAL_POPPED,
   );
   if (cachedTotalPopped) {
     console.log('Using cached totalPopped');
@@ -345,7 +345,7 @@ export const fetchTotalPopped = async (): Promise<number> => {
 
   const totalPopped = countSum.total + (await CountHistory.countDocuments());
 
-  cache.set(cacheLocation.totalPopped, totalPopped, 5 * 60);
+  cache.set(CacheLocation.TOTAL_POPPED, totalPopped, 5 * 60);
 
   console.log('Total popped fetched from MongoDB');
   return totalPopped;
