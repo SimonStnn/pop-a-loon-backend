@@ -185,147 +185,245 @@ export const fetchLeaderboard = async (
   userRank: { rank: number }[];
 }> => {
   const cacheKey = `${CacheLocation.LEADERBOARD}-${limit}-${skip}`;
+  const rankCacheKey = `${CacheLocation.RANK}-${userId}`;
 
-  const cachedLoaderboard:
-    | {
-        leaderboard: LeaderboardUser[];
-        userRank: { rank: number }[];
-      }
-    | undefined = cache.get(cacheKey);
-  if (cachedLoaderboard) {
-    return cachedLoaderboard;
-  }
+  const cachedLeaderboard: LeaderboardUser[] | undefined = cache.get(cacheKey);
+  const cachedUserRank: { rank: number }[] | undefined =
+    cache.get(rankCacheKey);
 
-  const counts: {
-    leaderboard: LeaderboardUser[];
-    userRank: { rank: number }[];
-  } = (
-    await CountHistory.aggregate([
-      {
-        $group: {
-          _id: {
-            user: '$user',
-            type: '$type',
-          },
-          popCount: {
-            $sum: 1,
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: balloonCollection,
-          localField: '_id.type',
-          foreignField: '_id',
-          as: 'balloonDetails',
-        },
-      },
-      {
-        $unwind: '$balloonDetails',
-      },
-      {
-        $addFields: {
-          count: {
-            $multiply: ['$popCount', '$balloonDetails.value'],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$_id.user',
-          count: {
-            $sum: '$count',
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: userCollection,
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      {
-        $unwind: '$user',
-      },
-      {
-        $match: {
-          'user.username': {
-            $ne: null,
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: countCollection,
-          localField: '_id',
-          foreignField: '_id',
-          as: 'userCount',
-        },
-      },
-      {
-        $addFields: {
-          count: {
-            $add: [
-              '$count',
-              {
-                $ifNull: [{ $arrayElemAt: ['$userCount.count', 0] }, 0],
-              },
-            ],
-          },
-        },
-      },
-      {
-        $sort: {
-          count: -1,
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          users: {
-            $push: {
+  const leaderboard: LeaderboardUser[] = cachedLeaderboard
+    ? cachedLeaderboard
+    : await CountHistory.aggregate([
+        {
+          $group: {
+            _id: {
               user: '$user',
-              count: '$count',
+              type: '$type',
+            },
+            popCount: {
+              $sum: 1,
             },
           },
         },
-      },
-      {
-        $unwind: {
-          path: '$users',
-          includeArrayIndex: 'rank',
+        {
+          $lookup: {
+            from: balloonCollection,
+            localField: '_id.type',
+            foreignField: '_id',
+            as: 'balloonDetails',
+          },
         },
-      },
-      {
-        $replaceRoot: {
-          newRoot: {
-            user: '$users.user',
-            count: '$users.count',
-            rank: {
-              $add: ['$rank', 1],
+        {
+          $unwind: '$balloonDetails',
+        },
+        {
+          $addFields: {
+            count: {
+              $multiply: ['$popCount', '$balloonDetails.value'],
             },
           },
         },
-      },
-      {
-        $facet: {
-          leaderboard: [
-            { $skip: skip }, // only return the requested number of documents
-            { $limit: limit },
-          ],
-          userRank: [
-            { $match: { 'user._id': new mongoose.Types.ObjectId(userId) } },
-            { $project: { rank: 1 } },
-          ],
+        {
+          $group: {
+            _id: '$_id.user',
+            count: {
+              $sum: '$count',
+            },
+          },
         },
-      },
-    ])
-  )[0];
+        {
+          $lookup: {
+            from: userCollection,
+            localField: '_id',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        {
+          $unwind: '$user',
+        },
+        {
+          $match: {
+            'user.username': {
+              $ne: null,
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: countCollection,
+            localField: '_id',
+            foreignField: '_id',
+            as: 'userCount',
+          },
+        },
+        {
+          $addFields: {
+            count: {
+              $add: [
+                '$count',
+                {
+                  $ifNull: [{ $arrayElemAt: ['$userCount.count', 0] }, 0],
+                },
+              ],
+            },
+          },
+        },
+        {
+          $sort: {
+            count: -1,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            users: {
+              $push: {
+                user: '$user',
+                count: '$count',
+              },
+            },
+          },
+        },
+        {
+          $unwind: {
+            path: '$users',
+            includeArrayIndex: 'rank',
+          },
+        },
+        {
+          $replaceRoot: {
+            newRoot: {
+              user: '$users.user',
+              count: '$users.count',
+              rank: {
+                $add: ['$rank', 1],
+              },
+            },
+          },
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: limit,
+        },
+        // {
+        //   $facet: {
+        //     leaderboard: [
+        //       { $skip: skip }, // only return the requested number of documents
+        //       { $limit: limit },
+        //     ],
+        //     userRank: [
+        //       { $match: { 'user._id': new mongoose.Types.ObjectId(userId) } },
+        //       { $project: { rank: 1 } },
+        //     ],
+        //   },
+        // },
+      ]);
 
-  cache.set(cacheKey, counts, 60);
-  return counts;
+  const userRank: { rank: number }[] = cachedUserRank
+    ? cachedUserRank
+    : (
+        await CountHistory.aggregate([
+          {
+            $group: {
+              _id: {
+                user: '$user',
+                type: '$type',
+              },
+              popCount: {
+                $sum: 1,
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: balloonCollection,
+              localField: '_id.type',
+              foreignField: '_id',
+              as: 'balloonDetails',
+            },
+          },
+          {
+            $unwind: '$balloonDetails',
+          },
+          {
+            $addFields: {
+              count: {
+                $multiply: ['$popCount', '$balloonDetails.value'],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: '$_id.user',
+              count: {
+                $sum: '$count',
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: countCollection,
+              localField: '_id',
+              foreignField: '_id',
+              as: 'userCount',
+            },
+          },
+          {
+            $addFields: {
+              count: {
+                $add: [
+                  '$count',
+                  {
+                    $ifNull: [{ $arrayElemAt: ['$userCount.count', 0] }, 0],
+                  },
+                ],
+              },
+            },
+          },
+          {
+            $sort: {
+              count: -1,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              users: {
+                $push: {
+                  user: '$_id',
+                  count: '$count',
+                },
+              },
+            },
+          },
+          {
+            $unwind: {
+              path: '$users',
+              includeArrayIndex: 'rank',
+            },
+          },
+          {
+            $match: {
+              'users.user': new mongoose.Types.ObjectId(userId),
+            },
+          },
+          {
+            $project: {
+              rank: {
+                $add: ['$rank', 1],
+              },
+            },
+          },
+        ])
+      )[0]?.rank;
+
+  if (!cachedLeaderboard) cache.set(cacheKey, leaderboard, 5 * 60);
+  if (!cachedUserRank) cache.set(rankCacheKey, userRank, 5 * 60);
+
+  return { leaderboard, userRank: userRank ?? { rank: -1 } };
 };
 
 export const fetchTotalPopped = async (): Promise<number> => {
@@ -333,7 +431,6 @@ export const fetchTotalPopped = async (): Promise<number> => {
     CacheLocation.TOTAL_POPPED,
   );
   if (cachedTotalPopped) {
-    console.log('Using cached totalPopped');
     return cachedTotalPopped;
   }
 
@@ -347,7 +444,6 @@ export const fetchTotalPopped = async (): Promise<number> => {
 
   cache.set(CacheLocation.TOTAL_POPPED, totalPopped, 5 * 60);
 
-  console.log('Total popped fetched from MongoDB');
   return totalPopped;
 };
 
