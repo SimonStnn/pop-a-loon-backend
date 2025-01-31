@@ -183,7 +183,7 @@ export const fetchLeaderboard = async (
   leaderboard: LeaderboardUser[];
   userRank: { rank: number }[];
 }> => {
-  const cacheKey = `${CacheLocation.LEADERBOARD}-${limit}-${skip}`;
+  const cacheKey = `${CacheLocation.LEADERBOARD}-${limit}-${skip}-${userId}`;
 
   const cachedLoaderboard:
     | {
