@@ -35,7 +35,7 @@ router.get(
       topUsers: counts.leaderboard.map((count) =>
         formatUser(count.user, count),
       ),
-      rank: counts.userRank ?? null,
+      rank: counts.userRank[0]?.rank ?? null,
     });
   },
 );
