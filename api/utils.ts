@@ -182,7 +182,7 @@ export const fetchLeaderboard = async (
   userId: string,
 ): Promise<{
   leaderboard: LeaderboardUser[];
-  userRank: { rank: number }[];
+  userRank: number;
 }> => {
   const cacheKey = `${CacheLocation.LEADERBOARD}-${limit}-${skip}`;
   const rankCacheKey = `${CacheLocation.RANK}-${userId}`;
@@ -322,7 +322,7 @@ export const fetchLeaderboard = async (
         // },
       ]);
 
-  const userRank: { rank: number }[] = cachedUserRank
+  const userRank: number = cachedUserRank
     ? cachedUserRank
     : (
         await CountHistory.aggregate([
@@ -423,7 +423,7 @@ export const fetchLeaderboard = async (
   if (!cachedLeaderboard) cache.set(cacheKey, leaderboard, 5 * 60);
   if (!cachedUserRank) cache.set(rankCacheKey, userRank, 5 * 60);
 
-  return { leaderboard, userRank: userRank ?? { rank: -1 } };
+  return { leaderboard, userRank: userRank ?? -1 };
 };
 
 export const fetchTotalPopped = async (): Promise<number> => {
