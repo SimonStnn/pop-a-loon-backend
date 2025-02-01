@@ -404,24 +404,18 @@ export const fetchHistory = async (
   }).exec();
 };
 
-export const fetchScores = async (id: string) => {
-  const rawScores = (await CountHistory.aggregate([
-    {
-      $lookup: {
-        from: userCollection,
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      },
-    },
-    {
-      $unwind: {
-        path: '$user',
-      },
-    },
+export const fetchScores = async (
+  id: string,
+): Promise<
+  {
+    name: string;
+    count: number;
+  }[]
+> => {
+  const scores = (await CountHistory.aggregate([
     {
       $match: {
-        'user._id': new mongoose.Types.ObjectId(id),
+        user: new mongoose.Types.ObjectId(id),
       },
     },
     {
@@ -432,13 +426,25 @@ export const fetchScores = async (id: string) => {
         },
       },
     },
-  ]).exec()) as { _id: string; count: number }[];
-
-  const scores = [];
-  for (const score of rawScores) {
-    const name = await fetchBalloonName(score._id);
-    scores.push({ name, count: score.count });
-  }
+    {
+      $lookup: {
+        from: 'balloons',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'balloon',
+      },
+    },
+    {
+      $unwind: '$balloon',
+    },
+    {
+      $project: {
+        _id: 0,
+        name: '$balloon.name',
+        count: 1,
+      },
+    },
+  ]).exec()) as { name: string; count: number }[];
 
   return scores;
 };
