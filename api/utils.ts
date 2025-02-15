@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
+import mongoose, { PipelineStage } from 'mongoose';
 import { ValidationChain } from 'express-validator';
 import User, {
   name as userCollection,
@@ -23,11 +23,10 @@ type LeaderboardUser = MongooseDocumentType<{
 }>;
 
 const cache = new NodeCache();
-const cacheLocation = {
-  leaderboard: 'leaderboard',
-  totalPopped: 'totalPopped',
-  rank: 'rank',
-};
+enum CacheLocation {
+  LEADERBOARD,
+  TOTAL_POPPED,
+}
 
 export const validateEnv = () => {
   if (!process.env.DATABASE_URL) {
@@ -180,11 +179,13 @@ export const fetchLeaderboard = async (
   limit: number,
   skip: number,
   userId: string,
+  startDate?: Date | null,
+  endDate?: Date | null,
 ): Promise<{
   leaderboard: LeaderboardUser[];
   userRank: { rank: number }[];
 }> => {
-  const cacheKey = `${cacheLocation.leaderboard}-${limit}-${skip}`;
+  const cacheKey = `${CacheLocation.LEADERBOARD}-${limit}-${skip}-${userId}-${startDate?.getTime()}-${endDate?.getTime()}`;
 
   const cachedLoaderboard:
     | {
@@ -196,66 +197,24 @@ export const fetchLeaderboard = async (
     return cachedLoaderboard;
   }
 
-  const counts: {
-    leaderboard: LeaderboardUser[];
-    userRank: { rank: number }[];
-  } = (
-    await CountHistory.aggregate([
-      {
-        $group: {
-          _id: {
-            user: '$user',
-            type: '$type',
-          },
-          popCount: {
-            $sum: 1,
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: balloonCollection,
-          localField: '_id.type',
-          foreignField: '_id',
-          as: 'balloonDetails',
-        },
-      },
-      {
-        $unwind: '$balloonDetails',
-      },
-      {
-        $addFields: {
-          count: {
-            $multiply: ['$popCount', '$balloonDetails.value'],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$_id.user',
-          count: {
-            $sum: '$count',
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: userCollection,
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      {
-        $unwind: '$user',
-      },
-      {
-        $match: {
-          'user.username': {
-            $ne: null,
-          },
-        },
-      },
+  const matchStages: PipelineStage[] = [];
+  if (startDate) {
+    const startObjectId = new mongoose.Types.ObjectId(
+      Math.floor(startDate.getTime() / 1000).toString(16) + '0000000000000000',
+    );
+    matchStages.push({ $match: { _id: { $gte: startObjectId } } });
+  }
+  if (endDate) {
+    const endObjectId = new mongoose.Types.ObjectId(
+      Math.floor(endDate.getTime() / 1000).toString(16) + 'ffffffffffffffff',
+    );
+    matchStages.push({ $match: { _id: { $lte: endObjectId } } });
+  }
+
+  // If there is no start date, we need to take the old counts into consideration
+  const oldCounts: PipelineStage[] = [];
+  if (!startDate) {
+    oldCounts.push(
       {
         $lookup: {
           from: countCollection,
@@ -276,11 +235,84 @@ export const fetchLeaderboard = async (
           },
         },
       },
+    );
+  }
+
+  const counts: {
+    leaderboard: LeaderboardUser[];
+    userRank: { rank: number }[];
+  } = (
+    await CountHistory.aggregate([
+      // 1. Match the date range if applicable
+      ...matchStages,
+      // 2. Group by user and balloon type
+      {
+        $group: {
+          _id: {
+            user: '$user',
+            type: '$type',
+          },
+          popCount: {
+            $sum: 1,
+          },
+        },
+      },
+      // 3. Take balloon values into consideration
+      {
+        $lookup: {
+          from: balloonCollection,
+          localField: '_id.type',
+          foreignField: '_id',
+          as: 'balloonDetails',
+        },
+      },
+      {
+        $unwind: '$balloonDetails',
+      },
+      {
+        $addFields: {
+          count: {
+            $multiply: ['$popCount', '$balloonDetails.value'],
+          },
+        },
+      },
+      // 4. Calculate the total count for each user
+      {
+        $group: {
+          _id: '$_id.user',
+          count: {
+            $sum: '$count',
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: userCollection,
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: '$user',
+      },
+      // 5. Filter out users without a username
+      {
+        $match: {
+          'user.username': {
+            $ne: null,
+          },
+        },
+      },
+      // 6. Take old counts into consideration if applicable
+      ...oldCounts,
+      // Sort by count in descending order
       {
         $sort: {
           count: -1,
         },
       },
+      // 7. Add a rank to each user
       {
         $group: {
           _id: null,
@@ -309,6 +341,7 @@ export const fetchLeaderboard = async (
           },
         },
       },
+      // 8. Split the result into the leaderboard and the user's rank
       {
         $facet: {
           leaderboard: [
@@ -330,10 +363,9 @@ export const fetchLeaderboard = async (
 
 export const fetchTotalPopped = async (): Promise<number> => {
   const cachedTotalPopped: number | undefined = cache.get(
-    cacheLocation.totalPopped,
+    CacheLocation.TOTAL_POPPED,
   );
   if (cachedTotalPopped) {
-    console.log('Using cached totalPopped');
     return cachedTotalPopped;
   }
 
@@ -345,9 +377,8 @@ export const fetchTotalPopped = async (): Promise<number> => {
 
   const totalPopped = countSum.total + (await CountHistory.countDocuments());
 
-  cache.set(cacheLocation.totalPopped, totalPopped, 5 * 60);
+  cache.set(CacheLocation.TOTAL_POPPED, totalPopped, 5 * 60);
 
-  console.log('Total popped fetched from MongoDB');
   return totalPopped;
 };
 
@@ -407,24 +438,18 @@ export const fetchHistory = async (
   }).exec();
 };
 
-export const fetchScores = async (id: string) => {
-  const rawScores = (await CountHistory.aggregate([
-    {
-      $lookup: {
-        from: userCollection,
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      },
-    },
-    {
-      $unwind: {
-        path: '$user',
-      },
-    },
+export const fetchScores = async (
+  id: string,
+): Promise<
+  {
+    name: string;
+    count: number;
+  }[]
+> => {
+  const scores = (await CountHistory.aggregate([
     {
       $match: {
-        'user._id': new mongoose.Types.ObjectId(id),
+        user: new mongoose.Types.ObjectId(id),
       },
     },
     {
@@ -435,13 +460,25 @@ export const fetchScores = async (id: string) => {
         },
       },
     },
-  ]).exec()) as { _id: string; count: number }[];
-
-  const scores = [];
-  for (const score of rawScores) {
-    const name = await fetchBalloonName(score._id);
-    scores.push({ name, count: score.count });
-  }
+    {
+      $lookup: {
+        from: 'balloons',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'balloon',
+      },
+    },
+    {
+      $unwind: '$balloon',
+    },
+    {
+      $project: {
+        _id: 0,
+        name: '$balloon.name',
+        count: 1,
+      },
+    },
+  ]).exec()) as { name: string; count: number }[];
 
   return scores;
 };

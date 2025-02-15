@@ -250,6 +250,20 @@ paths:
             minimum: 0
             default: 0
             description: The number of users to skip
+        - in: query
+          name: start-date
+          required: false
+          schema:
+            type: string
+            format: iso-date
+            description: The start date of the leaderboard
+        - in: query
+          name: end-date
+          required: false
+          schema:
+            type: string
+            format: iso-date
+            description: The end date of the leaderboard
       responses:
         200:
           description: The leaderboard
