@@ -6,10 +6,9 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "esModuleInterop": true,
-    "baseUrl": "./api",
     "paths": {
       "@/*": [
-        "./*"
+        "./api/*"
       ],
     },
   },
