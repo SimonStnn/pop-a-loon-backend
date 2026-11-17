@@ -4,6 +4,14 @@ export type JWTSignature = {
   id: string;
 };
 
+export type SpawnTokenPayload = {
+  sub: string;
+  type: 'spawn';
+  balloon: string;
+  nonce: string;
+  nextSpawn: number;
+};
+
 export type MongooseDocumentType<T> = mongoose.Document<unknown, {}, T> &
   T & {
     _id: mongoose.Types.ObjectId;

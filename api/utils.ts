@@ -13,7 +13,13 @@ import Balloon, {
   BalloonDocument,
 } from './schemas/balloon';
 import CountHistory from './schemas/counthistory';
-import { JWTSignature, MongooseDocumentType, ResponseSchema } from './const';
+import {
+  JWTSignature,
+  MongooseDocumentType,
+  ResponseSchema,
+  SpawnTokenPayload,
+} from './const';
+import SpawnToken from './schemas/spawn-token';
 
 type LeaderboardUser = MongooseDocumentType<{
   count: number;
@@ -43,6 +49,11 @@ export const validateEnv = () => {
     console.error('No token expiration provided');
     process.exit(1);
   }
+
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    console.error('JWT_SECRET must be at least 32 characters');
+    process.exit(1);
+  }
 };
 
 export const testOrigin = (origin: string) => {
@@ -64,7 +75,10 @@ export const validation = {
 };
 
 export const generateToken = (id: string): string => {
-  return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!);
+  return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!, {
+    algorithm: 'HS256',
+    expiresIn: process.env.JWT_EXPIRATION || '30d',
+  });
 };
 
 export const formatUser = (
@@ -481,4 +495,132 @@ export const fetchScores = async (
   ]).exec()) as { name: string; count: number }[];
 
   return scores;
+};
+
+// ─── Spawn Token Utilities ────────────────────────────────────────────────
+
+const SPAWN_TOKEN_TTL_MS = 30 * 1000; // 30 seconds
+
+export const generateSpawnToken = async (
+  userId: string,
+  balloonType: string,
+  nextSpawnAt: number,
+): Promise<string> => {
+  const nonce = crypto.randomUUID();
+  const expiresAt = new Date(nextSpawnAt);
+
+  // Persist the nonce for one-time validation
+  await SpawnToken.create({
+    userId: new mongoose.Types.ObjectId(userId),
+    nonce,
+    used: false,
+    expiresAt,
+  });
+
+  const payload: SpawnTokenPayload = {
+    sub: userId,
+    type: 'spawn',
+    balloon: balloonType,
+    nonce,
+    nextSpawn: nextSpawnAt,
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET!);
+};
+
+export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, process.env.JWT_SECRET!, (err, decoded) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(decoded as SpawnTokenPayload);
+    });
+  });
+};
+
+export const consumeSpawnToken = async (
+  token: string,
+  userId: string,
+): Promise<SpawnTokenPayload> => {
+  const payload = await verifySpawnToken(token);
+
+  if (payload.type !== 'spawn') {
+    throw new Error('Invalid token type');
+  }
+  if (payload.sub !== userId) {
+    throw new Error('Token does not belong to user');
+  }
+
+  // Atomically mark the nonce as used
+  const result = await SpawnToken.findOneAndUpdate(
+    { nonce: payload.nonce, used: false },
+    { $set: { used: true } },
+    { new: true },
+  );
+
+  if (!result) {
+    throw new Error('Spawn token already used or expired');
+  }
+
+  return payload;
+};
+
+type BalloonPlain = {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  value: number;
+  spawn_chance: number;
+  season?: {
+    start: { month: number; day: number };
+    end: { month: number; day: number };
+    timeZone?: string;
+  };
+};
+
+export const selectBalloonType = async (
+  now: Date = new Date(),
+): Promise<BalloonPlain> => {
+  const balloons = await Balloon.find({}).lean();
+  const eligible = balloons.filter((b) => {
+    if (!b.season) return true;
+    return isInSeason(b.season, now);
+  });
+
+  if (eligible.length === 0) {
+    // Fall back to all balloons if none are in season
+    return balloons[Math.floor(Math.random() * balloons.length)];
+  }
+
+  const totalWeight = eligible.reduce((sum, b) => sum + b.spawn_chance, 0);
+  let random = Math.random() * totalWeight;
+  for (const balloon of eligible) {
+    random -= balloon.spawn_chance;
+    if (random <= 0) return balloon;
+  }
+  return eligible[eligible.length - 1];
+};
+
+export const isInSeason = (
+  season: {
+    start: { month: number; day: number };
+    end: { month: number; day: number };
+    timeZone?: string;
+  },
+  date: Date = new Date(),
+): boolean => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: season.timeZone,
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+  const current = month * 100 + day;
+  const start = season.start.month * 100 + season.start.day;
+  const end = season.end.month * 100 + season.end.day;
+
+  return start <= end
+    ? current >= start && current <= end
+    : current >= start || current <= end;
 };
