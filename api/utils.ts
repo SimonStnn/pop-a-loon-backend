@@ -397,16 +397,21 @@ export const fetchTotalPopped = async (): Promise<number> => {
 };
 
 export const fetchBalloonType = async (
-  name: string,
+  nameOrId: string,
 ): Promise<BalloonDocument> => {
-  const cacheKey = `${balloonCollection}-${name}`;
+  const cacheKey = `${balloonCollection}-${nameOrId}`;
 
   const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
   if (cachedBalloon) {
     return cachedBalloon;
   }
 
-  const balloon: BalloonDocument | null = await Balloon.findOne({ name });
+  // Accept either a balloon name or an ObjectId
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(nameOrId);
+  const balloon: BalloonDocument | null = isObjectId
+    ? await Balloon.findById(nameOrId)
+    : await Balloon.findOne({ name: nameOrId });
+
   if (!balloon) {
     throw new Error('Balloon not found');
   }
@@ -525,7 +530,7 @@ export const generateSpawnToken = async (
     nextSpawn: nextSpawnAt,
   };
   return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: SPAWN_TOKEN_TTL_MS,
+    expiresIn: '30s',
   });
 };
 
@@ -536,7 +541,13 @@ export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
         reject(err);
         return;
       }
-      resolve(decoded as SpawnTokenPayload);
+      const payload = decoded as SpawnTokenPayload;
+      // Enforce server-side nextSpawn rate limit
+      if (payload.nextSpawn && Date.now() < payload.nextSpawn) {
+        reject(new Error('Spawn token not yet valid'));
+        return;
+      }
+      resolve(payload);
     });
   });
 };
