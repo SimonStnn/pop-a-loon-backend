@@ -110,7 +110,7 @@ router.post(
       }
       return balloonType;
     }),
-  query('spawnToken').optional().isString().trim(),
+  body('spawnToken').optional().isString().trim(),
   async (req: Request, res: Response) => {
     const id = req.jwt!.id;
     const result = validationResult(req);

@@ -231,20 +231,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  spawnToken:
-                    type: string
-                    description: The one-time JWT spawn token (30s TTL)
-                  balloonType:
-                    type: string
-                    description: The balloon type the backend chose
-                  expiresAt:
-                    type: number
-                    description: Unix timestamp when the token expires
-                  nextSpawnAt:
-                    type: number
-                    description: Unix timestamp for the next allowed spawn
+                $ref: '#/components/schemas/SpawnToken'
         401:
           $ref: '#/components/responses/Unauthorized'
         500:
@@ -529,6 +516,21 @@ components:
       required:
         - 'spawnInterval'
         - 'badge'
+    SpawnToken:
+      type: object
+      properties:
+        spawnToken:
+          type: string
+          description: The one-time JWT spawn token
+        balloonType:
+          type: string
+          description: The balloon type the backend chose
+        expiresAt:
+          type: number
+          description: Unix timestamp when the token expires
+        nextSpawnAt:
+          type: number
+          description: Unix timestamp for the next allowed spawn
     User:
       properties:
         id:
