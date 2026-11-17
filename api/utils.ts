@@ -503,7 +503,7 @@ const SPAWN_TOKEN_TTL_MS = 30 * 1000; // 30 seconds
 
 export const generateSpawnToken = async (
   userId: string,
-  balloonType: string,
+  balloonId: mongoose.Types.ObjectId,
   nextSpawnAt: number,
 ): Promise<string> => {
   const nonce = crypto.randomUUID();
@@ -512,6 +512,7 @@ export const generateSpawnToken = async (
   // Persist the nonce for one-time validation
   await SpawnToken.create({
     userId: new mongoose.Types.ObjectId(userId),
+    balloon: balloonId,
     nonce,
     used: false,
     expiresAt,
@@ -520,11 +521,12 @@ export const generateSpawnToken = async (
   const payload: SpawnTokenPayload = {
     sub: userId,
     type: 'spawn',
-    balloon: balloonType,
     nonce,
     nextSpawn: nextSpawnAt,
   };
-  return jwt.sign(payload, process.env.JWT_SECRET!);
+  return jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: SPAWN_TOKEN_TTL_MS,
+  });
 };
 
 export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
@@ -542,7 +544,7 @@ export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
 export const consumeSpawnToken = async (
   token: string,
   userId: string,
-): Promise<SpawnTokenPayload> => {
+): Promise<{ balloon: string }> => {
   const payload = await verifySpawnToken(token);
 
   if (payload.type !== 'spawn') {
@@ -552,7 +554,7 @@ export const consumeSpawnToken = async (
     throw new Error('Token does not belong to user');
   }
 
-  // Atomically mark the nonce as used
+  // Atomically mark the nonce as used and return the stored balloon ObjectId
   const result = await SpawnToken.findOneAndUpdate(
     { nonce: payload.nonce, used: false },
     { $set: { used: true } },
@@ -563,7 +565,7 @@ export const consumeSpawnToken = async (
     throw new Error('Spawn token already used or expired');
   }
 
-  return payload;
+  return { balloon: result.balloon.toString() };
 };
 
 type BalloonPlain = {

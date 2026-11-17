@@ -134,11 +134,11 @@ router.post(
         return;
       }
       try {
-        const payload = await consumeSpawnToken(spawnToken, id);
-        // Use the balloon type from the token, ignoring the query param
+        const { balloon } = await consumeSpawnToken(spawnToken, id);
+        const balloonDoc = await fetchBalloonType(balloon);
         const countHistory = new CountHistory({
           user: id,
-          type: payload.balloon,
+          type: balloonDoc._id,
         });
         await countHistory.save();
       } catch (e) {

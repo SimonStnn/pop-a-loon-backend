@@ -3,6 +3,7 @@ import { MongooseDocumentType } from '../const';
 
 export type SpawnToken = {
   userId: mongoose.Schema.Types.ObjectId;
+  balloon: mongoose.Schema.Types.ObjectId;
   nonce: string;
   used: boolean;
   expiresAt: Date;
@@ -12,6 +13,11 @@ export const schema = new mongoose.Schema<SpawnToken>({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true,
+  },
+  balloon: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Balloon',
     required: true,
   },
   nonce: {

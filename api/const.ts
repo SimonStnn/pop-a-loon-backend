@@ -7,7 +7,6 @@ export type JWTSignature = {
 export type SpawnTokenPayload = {
   sub: string;
   type: 'spawn';
-  balloon: string;
   nonce: string;
   nextSpawn: number;
 };

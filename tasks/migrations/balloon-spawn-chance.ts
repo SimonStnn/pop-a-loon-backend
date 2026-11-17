@@ -16,7 +16,11 @@ const balloonConfigs = [
   {
     name: 'christmas',
     spawn_chance: 0.3,
-    season: { start: { month: 12, day: 1 }, end: { month: 12, day: 31 } },
+    season: {
+      start: { month: 12, day: 1 },
+      end: { month: 12, day: 31 },
+      timeZone: 'Europe/Brussels',
+    },
   },
   { name: 'fast', spawn_chance: 0.1 },
   { name: 'ghost', spawn_chance: 0.1 },
