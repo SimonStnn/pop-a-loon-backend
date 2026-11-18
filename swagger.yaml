@@ -161,7 +161,7 @@ paths:
         - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/balloonType'
-        - in: query
+        - in: body
           name: spawnToken
           required: false
           schema:
@@ -421,13 +421,20 @@ components:
     balloonType:
       name: type
       in: query
-      required: true
-      description: 'The type of the balloon'
+      required: false
+      description: 'The type of the balloon. Required in legacy mode; ignored when spawnToken is provided.'
       schema:
         type: string
         enum:
           - 'default'
           - 'confetti'
+          - 'gold'
+          - 'splitter'
+          - 'christmas'
+          - 'fast'
+          - 'ghost'
+          - 'disco'
+          - 'bubble'
 
   responses:
     BadRequest: # 400
@@ -528,9 +535,6 @@ components:
         expiresAt:
           type: number
           description: Unix timestamp when the token expires
-        nextSpawnAt:
-          type: number
-          description: Unix timestamp for the next allowed spawn
     User:
       properties:
         id:

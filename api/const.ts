@@ -8,7 +8,6 @@ export type SpawnTokenPayload = {
   sub: string;
   type: 'spawn';
   nonce: string;
-  nextSpawn: number;
 };
 
 export type MongooseDocumentType<T> = mongoose.Document<unknown, {}, T> &

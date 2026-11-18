@@ -504,15 +504,16 @@ export const fetchScores = async (
 
 // ─── Spawn Token Utilities ────────────────────────────────────────────────
 
-const SPAWN_TOKEN_TTL_MS = 30 * 1000; // 30 seconds
+const SPAWN_TOKEN_TTL_MS = 30 * 1000; // 30 seconds (balloon lifetime)
 
 export const generateSpawnToken = async (
   userId: string,
   balloonId: mongoose.Types.ObjectId,
-  nextSpawnAt: number,
 ): Promise<string> => {
   const nonce = crypto.randomUUID();
-  const expiresAt = new Date(nextSpawnAt);
+  // expiresAt matches the JWT TTL so the DB doc is cleaned up at the same
+  // time the token becomes unverifiable
+  const expiresAt = new Date(Date.now() + SPAWN_TOKEN_TTL_MS);
 
   // Persist the nonce for one-time validation
   await SpawnToken.create({
@@ -527,7 +528,6 @@ export const generateSpawnToken = async (
     sub: userId,
     type: 'spawn',
     nonce,
-    nextSpawn: nextSpawnAt,
   };
   return jwt.sign(payload, process.env.JWT_SECRET!, {
     expiresIn: '30s',
@@ -541,13 +541,7 @@ export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
         reject(err);
         return;
       }
-      const payload = decoded as SpawnTokenPayload;
-      // Enforce server-side nextSpawn rate limit
-      if (payload.nextSpawn && Date.now() < payload.nextSpawn) {
-        reject(new Error('Spawn token not yet valid'));
-        return;
-      }
-      resolve(payload);
+      resolve(decoded as SpawnTokenPayload);
     });
   });
 };

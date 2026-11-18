@@ -154,7 +154,10 @@ router.post(
         return;
       }
       if (spawnToken) {
-        // Validate but don't enforce
+        // Legacy mode: a token was supplied but enforcement is not yet
+        // active. We consume it (marks nonce used) but still honor the
+        // client-supplied type — this is a known weakening until
+        // SPAWN_TOKEN_REQUIRED_DATE flips.
         try {
           await consumeSpawnToken(spawnToken, id);
         } catch {
