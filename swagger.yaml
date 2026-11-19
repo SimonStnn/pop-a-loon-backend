@@ -161,6 +161,15 @@ paths:
         - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/balloonType'
+        - in: body
+          name: spawnToken
+          required: false
+          schema:
+            type: string
+            description: >
+              One-time spawn token issued by the backend.
+              Required after SPAWN_TOKEN_REQUIRED_DATE.
+              When provided, the `type` parameter is ignored.
       responses:
         200:
           description: The updated user
@@ -175,6 +184,8 @@ paths:
                   count:
                     type: integer
                     description: The user's count
+        400:
+          $ref: '#/components/responses/BadRequest'
         401:
           $ref: '#/components/responses/Unauthorized'
         404:
@@ -205,6 +216,24 @@ paths:
                     type: string
                     description: The version of the server
                     example: '1.0.0'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/configuration/spawn-token:
+    get:
+      summary: Get a one-time spawn token for the next balloon
+      tags: [Config]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: The spawn token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpawnToken'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -392,13 +421,20 @@ components:
     balloonType:
       name: type
       in: query
-      required: true
-      description: 'The type of the balloon'
+      required: false
+      description: 'The type of the balloon. Required in legacy mode; ignored when spawnToken is provided.'
       schema:
         type: string
         enum:
           - 'default'
           - 'confetti'
+          - 'gold'
+          - 'splitter'
+          - 'christmas'
+          - 'fast'
+          - 'ghost'
+          - 'disco'
+          - 'bubble'
 
   responses:
     BadRequest: # 400
@@ -487,6 +523,18 @@ components:
       required:
         - 'spawnInterval'
         - 'badge'
+    SpawnToken:
+      type: object
+      properties:
+        spawnToken:
+          type: string
+          description: The one-time JWT spawn token
+        balloonType:
+          type: string
+          description: The balloon type the backend chose
+        expiresAt:
+          type: number
+          description: Unix timestamp when the token expires
     User:
       properties:
         id:
