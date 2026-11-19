@@ -401,9 +401,12 @@ export const fetchBalloonType = async (
 ): Promise<BalloonDocument> => {
   const cacheKey = `${balloonCollection}-${nameOrId}`;
 
-  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
+  // Cache a plain object, not the Mongoose document — node-cache clones on
+  // set, and cloning a document with nested subdocuments (e.g. season) crashes.
+  const cachedBalloon: Record<string, unknown> | undefined =
+    cache.get(cacheKey);
   if (cachedBalloon) {
-    return cachedBalloon;
+    return Balloon.hydrate(cachedBalloon) as BalloonDocument;
   }
 
   // Accept either a balloon name or an ObjectId
@@ -416,16 +419,17 @@ export const fetchBalloonType = async (
     throw new Error('Balloon not found');
   }
 
-  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
+  cache.set(cacheKey, balloon.toObject(), 60 * 60); // cache for 1 hour
 
   return balloon;
 };
 
 export const fetchBalloonName = async (id: string): Promise<string> => {
   const cacheKey = `${balloonCollection}-${id}`;
-  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
+  const cachedBalloon: Record<string, unknown> | undefined =
+    cache.get(cacheKey);
   if (cachedBalloon) {
-    return cachedBalloon.name;
+    return cachedBalloon.name as string;
   }
 
   const balloon = await Balloon.findById(id);
@@ -433,7 +437,7 @@ export const fetchBalloonName = async (id: string): Promise<string> => {
     throw new Error('Balloon not found');
   }
 
-  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
+  cache.set(cacheKey, balloon.toObject(), 60 * 60); // cache for 1 hour
   return balloon.name;
 };
 
