@@ -160,7 +160,15 @@ paths:
       security:
         - ApiKeyAuth: []
       parameters:
-        - $ref: '#/components/parameters/balloonType'
+        - in: body
+          name: spawnToken
+          required: true
+          schema:
+            type: string
+            description: >
+              One-time spawn token issued by /api/configuration/spawn-token.
+              Required. The balloon type is taken from the token, so the
+              `type` query parameter is ignored.
       responses:
         200:
           description: The updated user
@@ -175,6 +183,8 @@ paths:
                   count:
                     type: integer
                     description: The user's count
+        400:
+          $ref: '#/components/responses/BadRequest'
         401:
           $ref: '#/components/responses/Unauthorized'
         404:
@@ -205,6 +215,42 @@ paths:
                     type: string
                     description: The version of the server
                     example: '1.0.0'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/configuration/spawn-token:
+    get:
+      summary: Get this user's active balloon spawn schedule
+      description: >-
+        Returns the user's active spawn schedule. While a schedule is active,
+        repeated calls return the same token and spawn time (idempotent), so
+        polling cannot yield extra balloons. A new schedule is created only
+        after the current token is consumed or expires.
+      tags: [Config]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: spawn-rate
+          required: false
+          description: >-
+            The user's spawn-rate slider (0.1-1). Values outside the range are
+            clamped, so this can only slow spawning down. Applies to the next
+            schedule if one is already active.
+          schema:
+            type: number
+            minimum: 0.1
+            maximum: 1
+            default: 1
+      responses:
+        200:
+          description: The spawn token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpawnToken'
+        401:
+          $ref: '#/components/responses/Unauthorized'
         500:
           $ref: '#/components/responses/InternalServerError'
 
@@ -389,17 +435,6 @@ components:
       description: 'The id of the user'
       schema:
         type: string
-    balloonType:
-      name: type
-      in: query
-      required: true
-      description: 'The type of the balloon'
-      schema:
-        type: string
-        enum:
-          - 'default'
-          - 'confetti'
-
   responses:
     BadRequest: # 400
       description: 'Bad request'
@@ -487,6 +522,27 @@ components:
       required:
         - 'spawnInterval'
         - 'badge'
+    SpawnToken:
+      type: object
+      properties:
+        serverTime:
+          type: number
+          description: >-
+            Server clock at response time (Unix ms). Clients should subtract
+            (serverTime - local receive time) from spawnAt and expiresAt before
+            scheduling local alarms, to correct for clock skew.
+        spawnToken:
+          type: string
+          description: The one-time JWT spawn token
+        balloonType:
+          type: string
+          description: The balloon type the backend chose
+        spawnAt:
+          type: number
+          description: Unix timestamp when the balloon should spawn
+        expiresAt:
+          type: number
+          description: Unix timestamp when the token expires (spawnAt + 30s)
     User:
       properties:
         id:

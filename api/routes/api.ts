@@ -7,6 +7,7 @@ import UserRoutes from './user';
 import LeaderboardRoutes from './leaderboard';
 import ConfigRoutes from './config';
 import StatisticsRoutes from './statistics';
+import SpawnTokenRoutes from './spawn-token';
 
 const ApiRoutes = express.Router();
 
@@ -17,5 +18,6 @@ ApiRoutes.use('/user', UserRoutes);
 ApiRoutes.use('/leaderboard', LeaderboardRoutes);
 ApiRoutes.use('/configuration', ConfigRoutes);
 ApiRoutes.use('/statistics', StatisticsRoutes);
+ApiRoutes.use('/configuration/spawn-token', SpawnTokenRoutes);
 
 export default ApiRoutes;

@@ -4,6 +4,13 @@ export type JWTSignature = {
   id: string;
 };
 
+export type SpawnTokenPayload = {
+  sub: string;
+  type: 'spawn';
+  nonce: string; // Random UUID linking this JWT to its single-use DB schedule row.
+  spawnAt: number;
+};
+
 export type MongooseDocumentType<T> = mongoose.Document<unknown, {}, T> &
   T & {
     _id: mongoose.Types.ObjectId;
