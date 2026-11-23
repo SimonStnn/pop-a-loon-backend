@@ -37,11 +37,18 @@ export type ResponseSchema = {
   };
 };
 
+export type HistoryBucket = 'day' | 'week' | 'month';
+
 export type HistoryNode = {
   date: Date;
   pops: {
     [key: string]: number;
   };
+};
+
+export type HistoryResponse = {
+  history: HistoryNode[];
+  bucket: HistoryBucket;
 };
 
 declare module 'express' {

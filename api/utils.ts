@@ -14,6 +14,9 @@ import Balloon, {
 } from './schemas/balloon';
 import CountHistory from './schemas/counthistory';
 import {
+  HistoryBucket,
+  HistoryNode,
+  HistoryResponse,
   JWTSignature,
   MongooseDocumentType,
   ResponseSchema,
@@ -424,41 +427,133 @@ export const fetchBalloonType = async (
   return balloon;
 };
 
-export const fetchBalloonName = async (id: string): Promise<string> => {
-  const cacheKey = `${balloonCollection}-${id}`;
-  const cachedBalloon: Record<string, unknown> | undefined =
-    cache.get(cacheKey);
-  if (cachedBalloon) {
-    return cachedBalloon.name as string;
-  }
+const historyBucket = (startDate: Date, endDate: Date): HistoryBucket => {
+  const days = (endDate.getTime() - startDate.getTime()) / 86400000;
+  if (days <= 31) return 'day';
+  if (days <= 365) return 'week';
+  return 'month';
+};
 
-  const balloon = await Balloon.findById(id);
-  if (!balloon) {
-    throw new Error('Balloon not found');
+const bucketStart = (date: Date, bucket: HistoryBucket): Date => {
+  const result = new Date(date);
+  result.setUTCHours(0, 0, 0, 0);
+  if (bucket === 'month') {
+    result.setUTCDate(1);
+  } else if (bucket === 'week') {
+    // Match $dateTrunc's default Sunday-based weeks.
+    result.setUTCDate(result.getUTCDate() - result.getUTCDay());
   }
+  return result;
+};
 
-  cache.set(cacheKey, balloon.toObject(), 60 * 60); // cache for 1 hour
-  return balloon.name;
+const nextBucketStart = (date: Date, bucket: HistoryBucket): Date => {
+  const result = new Date(date);
+  if (bucket === 'month') {
+    result.setUTCMonth(result.getUTCMonth() + 1);
+  } else {
+    result.setUTCDate(result.getUTCDate() + (bucket === 'week' ? 7 : 1));
+  }
+  return result;
 };
 
 export const fetchHistory = async (
   startDate: Date,
   endDate: Date,
   id?: string,
-) => {
+): Promise<HistoryResponse> => {
+  const bucket = historyBucket(startDate, endDate);
+  const firstBucket = bucketStart(startDate, bucket);
+  const afterLastBucket = nextBucketStart(bucketStart(endDate, bucket), bucket);
+
   // Convert startDate and endDate to their equivalent ObjectId representations
   const startObjectId =
     Math.floor(startDate.getTime() / 1000).toString(16) + '0000000000000000';
   const endObjectId =
     Math.floor(endDate.getTime() / 1000).toString(16) + 'ffffffffffffffff';
 
-  return await CountHistory.find({
-    _id: {
-      $gte: startObjectId,
-      $lte: endObjectId,
+  // $dateTrunc and $densify require MongoDB 5.0/5.1 respectively.
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        _id: {
+          $gte: new mongoose.Types.ObjectId(startObjectId),
+          $lte: new mongoose.Types.ObjectId(endObjectId),
+        },
+        ...(id ? { user: new mongoose.Types.ObjectId(id) } : {}),
+      },
     },
-    ...(id ? { user: id } : {}),
-  }).exec();
+    {
+      $group: {
+        _id: {
+          date: {
+            $dateTrunc: { date: { $toDate: '$_id' }, unit: bucket },
+          },
+          type: '$type',
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: balloonCollection,
+        localField: '_id.type',
+        foreignField: '_id',
+        as: 'balloon',
+      },
+    },
+    { $unwind: '$balloon' },
+    {
+      $group: {
+        _id: '$_id.date',
+        pops: {
+          $push: { k: '$balloon.name', v: '$count' },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: '$_id',
+        pops: { $arrayToObject: '$pops' },
+      },
+    },
+    {
+      $densify: {
+        field: 'date',
+        range: {
+          step: 1,
+          unit: bucket,
+          // $densify's upper bound is exclusive.
+          bounds: [firstBucket, afterLastBucket],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: 1,
+        pops: { $ifNull: ['$pops', {}] },
+      },
+    },
+    { $sort: { date: 1 } },
+  ];
+
+  const history = await CountHistory.aggregate<HistoryNode>(pipeline).exec();
+
+  if (history.length > 0) {
+    return { history, bucket };
+  }
+
+  // No pop matched, so there is nothing for $densify to fill.
+  const emptyHistory: HistoryNode[] = [];
+  for (
+    let date = firstBucket;
+    date < afterLastBucket;
+    date = nextBucketStart(date, bucket)
+  ) {
+    emptyHistory.push({ date: new Date(date), pops: {} });
+  }
+  return { history: emptyHistory, bucket };
 };
 
 export const fetchScores = async (
