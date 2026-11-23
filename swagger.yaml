@@ -221,7 +221,12 @@ paths:
 
   /api/configuration/spawn-token:
     get:
-      summary: Get a one-time spawn token for the next balloon
+      summary: Get this user's active balloon spawn schedule
+      description: >-
+        Returns the user's active spawn schedule. While a schedule is active,
+        repeated calls return the same token and spawn time (idempotent), so
+        polling cannot yield extra balloons. A new schedule is created only
+        after the current token is consumed or expires.
       tags: [Config]
       security:
         - ApiKeyAuth: []
@@ -532,9 +537,12 @@ components:
         balloonType:
           type: string
           description: The balloon type the backend chose
+        spawnAt:
+          type: number
+          description: Unix timestamp when the balloon should spawn
         expiresAt:
           type: number
-          description: Unix timestamp when the token expires
+          description: Unix timestamp when the token expires (spawnAt + 30s)
     User:
       properties:
         id:

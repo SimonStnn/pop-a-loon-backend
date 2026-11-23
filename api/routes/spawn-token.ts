@@ -1,14 +1,12 @@
 import express, { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { generateSpawnToken, selectBalloonType } from '../utils';
+import { getOrCreateSpawnSchedule } from '../utils';
 
 const router = express.Router();
 
-const SPAWN_TOKEN_TTL_MS = 30 * 1000; // 30 seconds (balloon lifetime)
-
 const spawnTokenLimiter = rateLimit({
   windowMs: 30 * 1000,
-  max: 5,
+  max: 20,
   message: { error: 'Too many requests' },
   keyGenerator: (req) => req.jwt!.id,
 });
@@ -16,20 +14,15 @@ const spawnTokenLimiter = rateLimit({
 router.use(spawnTokenLimiter);
 
 router.get('/', async (req: Request, res: Response) => {
-  const userId = req.jwt!.id;
-
-  // Select a balloon type based on spawn_chance and season
-  const balloon = await selectBalloonType();
-
-  const now = Date.now();
-
-  // Generate spawn token
-  const token = await generateSpawnToken(userId, balloon._id);
+  // Returns the user's active schedule. Repeated calls while a schedule is
+  // active return the same token and spawn time (idempotent).
+  const schedule = await getOrCreateSpawnSchedule(req.jwt!.id);
 
   res.json({
-    spawnToken: token,
-    balloonType: balloon.name,
-    expiresAt: now + SPAWN_TOKEN_TTL_MS,
+    spawnToken: schedule.token,
+    balloonType: schedule.balloonName,
+    spawnAt: schedule.spawnAt.getTime(),
+    expiresAt: schedule.expiresAt.getTime(),
   });
 });
 

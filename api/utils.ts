@@ -19,7 +19,7 @@ import {
   ResponseSchema,
   SpawnTokenPayload,
 } from './const';
-import SpawnToken from './schemas/spawn-token';
+import SpawnToken, { SpawnTokenDocument } from './schemas/spawn-token';
 
 type LeaderboardUser = MongooseDocumentType<{
   count: number;
@@ -508,34 +508,78 @@ export const fetchScores = async (
 
 // ─── Spawn Token Utilities ────────────────────────────────────────────────
 
-const SPAWN_TOKEN_TTL_MS = 30 * 1000; // 30 seconds (balloon lifetime)
+// How long a balloon stays poppable after its scheduled spawn time.
+const SPAWN_TOKEN_TTL_MS = 30 * 1000;
 
-export const generateSpawnToken = async (
+/**
+ * The delay range between balloon spawns. The backend is the single source of
+ * truth for this so the schedule it hands out matches the published config.
+ */
+export const getSpawnInterval = (): { min: number; max: number } =>
+  process.env.NODE_ENV === 'development'
+    ? { min: 10 * 1000, max: 15 * 1000 }
+    : { min: 1000, max: 10 * 60000 };
+
+const randomBetween = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+/**
+ * Returns the user's active spawn schedule, creating one if none exists or the
+ * previous one expired.
+ *
+ * Idempotent: while a schedule is active, repeated calls return the same
+ * token and spawn time, so a client cannot obtain extra balloons by polling.
+ */
+export const getOrCreateSpawnSchedule = async (
   userId: string,
-  balloonId: mongoose.Types.ObjectId,
-): Promise<string> => {
-  const nonce = crypto.randomUUID();
-  // expiresAt matches the JWT TTL so the DB doc is cleaned up at the same
-  // time the token becomes unverifiable
-  const expiresAt = new Date(Date.now() + SPAWN_TOKEN_TTL_MS);
+): Promise<SpawnTokenDocument> => {
+  const now = Date.now();
 
-  // Persist the nonce for one-time validation
-  await SpawnToken.create({
-    userId: new mongoose.Types.ObjectId(userId),
-    balloon: balloonId,
-    nonce,
-    used: false,
-    expiresAt,
-  });
+  let schedule = await SpawnToken.findOne({ userId });
+
+  // The TTL monitor runs about once a minute, so replace expired rows here.
+  if (schedule && schedule.expiresAt.getTime() <= now) {
+    await SpawnToken.deleteOne({ _id: schedule._id });
+    schedule = null;
+  }
+
+  if (schedule) return schedule;
+
+  const balloon = await selectBalloonType();
+  const { min, max } = getSpawnInterval();
+  const spawnAt = now + randomBetween(min, max);
+  const expiresAt = spawnAt + SPAWN_TOKEN_TTL_MS;
+  const nonce = crypto.randomUUID();
 
   const payload: SpawnTokenPayload = {
     sub: userId,
     type: 'spawn',
     nonce,
+    spawnAt,
   };
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: '30s',
+  const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+    // nbf keeps the token unusable before the scheduled spawn time; exp ends
+    // the poppable window. jwt.verify enforces both.
+    notBefore: Math.max(0, Math.floor((spawnAt - now) / 1000)),
+    expiresIn: Math.ceil((expiresAt - now) / 1000),
   });
+
+  try {
+    return await SpawnToken.create({
+      userId: new mongoose.Types.ObjectId(userId),
+      balloon: balloon._id,
+      balloonName: balloon.name,
+      nonce,
+      token,
+      spawnAt: new Date(spawnAt),
+      expiresAt: new Date(expiresAt),
+    });
+  } catch (e) {
+    // A concurrent request won the race; return the schedule it created.
+    const existing = await SpawnToken.findOne({ userId });
+    if (existing) return existing;
+    throw e;
+  }
 };
 
 export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
@@ -563,12 +607,12 @@ export const consumeSpawnToken = async (
     throw new Error('Token does not belong to user');
   }
 
-  // Atomically mark the nonce as used and return the stored balloon ObjectId
-  const result = await SpawnToken.findOneAndUpdate(
-    { nonce: payload.nonce, used: false },
-    { $set: { used: true } },
-    { new: true },
-  );
+  // Atomically delete the schedule so the token can only be redeemed once.
+  // Deleting also frees the user's slot for the next schedule.
+  const result = await SpawnToken.findOneAndDelete({
+    userId: new mongoose.Types.ObjectId(userId),
+    nonce: payload.nonce,
+  });
 
   if (!result) {
     throw new Error('Spawn token already used or expired');
