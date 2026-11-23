@@ -4,7 +4,7 @@
   "description": "Backend RESTfull API for Pop-a-loon",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon api/index.ts",
+    "dev": "NODE_ENV=development nodemon api/index.ts",
     "build": "tsc",
     "start": "node dist/api/index.js",
     "prepare": "husky"
