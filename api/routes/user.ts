@@ -87,30 +87,15 @@ router.get(
   },
 );
 
-const SPAWN_TOKEN_REQUIRED_DATE = process.env.SPAWN_TOKEN_REQUIRED_DATE
-  ? new Date(process.env.SPAWN_TOKEN_REQUIRED_DATE)
-  : null;
-
-const isSpawnTokenRequired = (): boolean => {
-  if (!SPAWN_TOKEN_REQUIRED_DATE) return false;
-  return new Date() >= SPAWN_TOKEN_REQUIRED_DATE;
-};
-
 router.use('/count/increment', countLimiter);
 router.post(
   '/count/increment',
-  query('type')
-    .optional()
+  body('spawnToken')
     .isString()
-    .customSanitizer(async (input: string | undefined, { req }) => {
-      if (!input) return undefined;
-      const balloonType = await fetchBalloonType(input);
-      if (!balloonType) {
-        throw new Error('Invalid balloon type');
-      }
-      return balloonType;
-    }),
-  body('spawnToken').optional().isString().trim(),
+    .withMessage('spawnToken is required')
+    .trim()
+    .notEmpty()
+    .withMessage('spawnToken is required'),
   async (req: Request, res: Response) => {
     const id = req.jwt!.id;
     const result = validationResult(req);
@@ -118,57 +103,21 @@ router.post(
       res.status(400).json({ error: result.array() });
       return;
     }
-    const data = matchedData(req);
-    const { type, spawnToken } = data as {
-      type?: { id: string; name: string };
-      spawnToken?: string;
-    };
+    const { spawnToken } = matchedData(req) as { spawnToken: string };
 
-    const tokenRequired = isSpawnTokenRequired();
-
-    if (tokenRequired) {
-      if (!spawnToken) {
-        res.status(400).json({
-          error: 'spawnToken is required. Please update your extension.',
-        });
-        return;
-      }
-      try {
-        const { balloon } = await consumeSpawnToken(spawnToken, id);
-        const balloonDoc = await fetchBalloonType(balloon);
-        const countHistory = new CountHistory({
-          user: id,
-          type: balloonDoc._id,
-        });
-        await countHistory.save();
-      } catch (e) {
-        res.status(400).json({
-          error: e instanceof Error ? e.message : 'Invalid spawn token',
-        });
-        return;
-      }
-    } else {
-      // Legacy mode: spawnToken optional, type required
-      if (!type) {
-        res.status(400).json({ error: 'type is required' });
-        return;
-      }
-      if (spawnToken) {
-        // Legacy mode: a token was supplied but enforcement is not yet
-        // active. We consume it (marks nonce used) but still honor the
-        // client-supplied type — this is a known weakening until
-        // SPAWN_TOKEN_REQUIRED_DATE flips.
-        try {
-          await consumeSpawnToken(spawnToken, id);
-        } catch {
-          // Ignore token validation errors in legacy mode
-        }
-      }
+    try {
+      const { balloon } = await consumeSpawnToken(spawnToken, id);
+      const balloonDoc = await fetchBalloonType(balloon);
       const countHistory = new CountHistory({
         user: id,
-        type: type.id,
+        type: balloonDoc._id,
       });
       await countHistory.save();
+    } catch (e) {
+      res.status(400).json({
+        error: e instanceof Error ? e.message : 'Invalid spawn token',
+      });
+      return;
     }
 
     res.json({

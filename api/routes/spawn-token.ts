@@ -19,6 +19,9 @@ router.get('/', async (req: Request, res: Response) => {
   const schedule = await getOrCreateSpawnSchedule(req.jwt!.id);
 
   res.json({
+    // Lets the client correct for clock skew: all timestamps below are on the
+    // server's clock, while browser alarms run on the client's clock.
+    serverTime: Date.now(),
     spawnToken: schedule.token,
     balloonType: schedule.balloonName,
     spawnAt: schedule.spawnAt.getTime(),
