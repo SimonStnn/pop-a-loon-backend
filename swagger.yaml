@@ -1,4 +1,4 @@
-openapi: '3.0.8'
+openapi: '3.1.0'
 info:
   title: User API
   version: 0.0.0 # Gets replaced by the version in package.json in swagger.ts
@@ -225,16 +225,20 @@ paths:
       tags: [User]
       security:
         - ApiKeyAuth: []
-      parameters:
-        - in: body
-          name: spawnToken
-          required: true
-          schema:
-            type: string
-            description: >
-              One-time spawn token issued by /api/configuration/spawn-token.
-              Required. The balloon type is taken from the token, so the
-              `type` query parameter is ignored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [spawnToken]
+              properties:
+                spawnToken:
+                  type: string
+                  description: >
+                    One-time spawn token issued by /api/configuration/spawn-token.
+                    The balloon type is taken from the token, so the former `type`
+                    query parameter is no longer used.
       responses:
         200:
           description: The updated user
