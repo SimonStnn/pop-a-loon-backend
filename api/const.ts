@@ -7,7 +7,7 @@ export type JWTSignature = {
 export type SpawnTokenPayload = {
   sub: string;
   type: 'spawn';
-  nonce: string;
+  nonce: string; // Random UUID linking this JWT to its single-use DB schedule row.
   spawnAt: number;
 };
 
