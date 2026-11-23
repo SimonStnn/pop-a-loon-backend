@@ -7,8 +7,8 @@ export default (req: Request, res: Response, next: NextFunction) => {
   // Extract JWT token from request headers
   const token = req.headers.authorization;
 
-  // If path is /new, move to the next middleware or route handler
-  if (['/user/new', '/status'].includes(req.path)) {
+  // These endpoints are deliberately public
+  if (['/user/new', '/auth/recover', '/status'].includes(req.path)) {
     next();
     return;
   }

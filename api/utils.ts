@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'crypto';
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import jwt from 'jsonwebtoken';
@@ -67,6 +68,35 @@ export const generateToken = (id: string): string => {
   return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!);
 };
 
+// Crockford base32 avoids ambiguous characters, so a code printed in the
+// extension can be typed back without confusing 0/O or 1/I/L.
+const recoveryCodeAlphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+export const normalizeRecoveryCode = (code: string): string =>
+  code
+    .replace(/[\s-]/g, '')
+    .toUpperCase()
+    .replace(/O/g, '0')
+    .replace(/[IL]/g, '1');
+
+export const isValidRecoveryCode = (code: string): boolean =>
+  /^[0-9A-HJKMNP-TV-Z]{24}$/.test(normalizeRecoveryCode(code));
+
+export const generateRecoveryCode = (): string => {
+  const bits = Array.from(randomBytes(15))
+    .map((byte) => byte.toString(2).padStart(8, '0'))
+    .join('');
+
+  let code = '';
+  for (let i = 0; i < bits.length; i += 5) {
+    code += recoveryCodeAlphabet[parseInt(bits.slice(i, i + 5), 2)];
+  }
+  return code.match(/.{1,4}/g)!.join('-');
+};
+
+export const hashRecoveryCode = (code: string): string =>
+  createHash('sha256').update(normalizeRecoveryCode(code)).digest('hex');
+
 export const formatUser = (
   user: UserDocument,
   count: Record<'count', number>,
@@ -77,6 +107,10 @@ export const formatUser = (
     username: user.username,
     email:
       jwt?.id !== undefined && jwt?.id === user.id ? user.email : undefined,
+    hasRecoveryCode:
+      jwt?.id !== undefined && jwt?.id === user.id
+        ? Boolean(user.recoveryHash)
+        : undefined,
     count: count.count,
     updatedAt: user.updatedAt,
     createdAt: user._id.getTimestamp(),

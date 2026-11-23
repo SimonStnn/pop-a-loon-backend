@@ -62,6 +62,72 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
 
+  /api/user/recovery-code:
+    post:
+      summary: Create or replace the account recovery code
+      description: >
+        Returns the plaintext code once. Regenerating a code invalidates the
+        previously issued one.
+      tags: [User]
+      responses:
+        200:
+          description: The generated recovery code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The recovery code to store somewhere safe
+                required:
+                  - code
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/recover:
+    post:
+      summary: Recover an account with its recovery code
+      tags: [User]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: The recovery code shown when it was generated
+              required:
+                - code
+      responses:
+        200:
+          description: A new token for the recovered account
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                        description: A newly signed token for the recovered user
+                  - $ref: '#/components/schemas/User'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
   /api/user/{id}:
     get:
       summary: Get a user by id
@@ -498,6 +564,9 @@ components:
         email:
           type: string
           description: The user's email (will only be returned if the user is the same as the one making the request)
+        hasRecoveryCode:
+          type: boolean
+          description: Whether a recovery code is set (only returned to the account owner)
         count:
           type: integer
           description: The user's count
