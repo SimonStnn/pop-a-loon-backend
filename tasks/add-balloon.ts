@@ -12,7 +12,7 @@ console.log(`Adding balloon with name: "${name}"`);
   const db = await mongoose.connect(process.env.DATABASE_URL!);
 
   // create a new balloon document
-  const balloon = new Balloon({ name });
+  const balloon = new Balloon({ name, value: 1 });
 
   // save the balloon document
   await balloon.save();
