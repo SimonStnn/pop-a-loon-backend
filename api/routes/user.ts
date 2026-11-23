@@ -15,9 +15,11 @@ import {
   consumeSpawnToken,
   fetchBalloonType,
   formatUser,
+  generateRecoveryCode,
   generateToken,
   getUserAndCount,
   getUserCount,
+  hashRecoveryCode,
   validation,
 } from '../utils';
 
@@ -71,6 +73,22 @@ router.post(
     });
   },
 );
+
+router.post('/recovery-code', async (req: Request, res: Response) => {
+  const user = await User.findById(req.jwt!.id);
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const code = generateRecoveryCode();
+  user.recoveryHash = hashRecoveryCode(code);
+  user.recoveryCreatedAt = new Date();
+  await user.save();
+
+  // The plaintext is only ever sent here; the database stores its hash.
+  res.json({ code });
+});
 
 router.get(
   '/:id',
@@ -182,11 +200,14 @@ router.delete('/', async (req: Request, res: Response) => {
   if (!user) {
     res.status(404).json({ error: 'User not found' });
     return;
-  } else if (!count) {
-    res.status(404).json({ error: 'Count not found' });
-    return;
   }
 
-  res.json(formatUser(user, count, req.jwt!) as ResponseSchema['user']);
+  res.json(
+    formatUser(
+      user,
+      { count: count?.count ?? 0 },
+      req.jwt!,
+    ) as ResponseSchema['user'],
+  );
 });
 export default router;
