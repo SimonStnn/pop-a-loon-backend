@@ -1,12 +1,6 @@
 import express, { Request, Response } from 'express';
-import {
-  fetchBalloonName,
-  fetchHistory,
-  fetchScores,
-  fetchTotalPopped,
-} from '../utils';
+import { fetchHistory, fetchScores, fetchTotalPopped } from '../utils';
 import { matchedData, query, validationResult } from 'express-validator';
-import { HistoryNode } from '@/const';
 
 const router = express.Router();
 
@@ -45,47 +39,7 @@ router.get(
     const endDate = new Date(data['end-date'] ?? new Date());
     const id = data.id === req.jwt!.id ? data.id : undefined;
 
-    const history = await fetchHistory(startDate, endDate, id);
-
-    const uniqueTypes = [
-      ...new Set(history.map((node) => node.type.toString())),
-    ];
-    const types: string[] = [];
-    for (const type of uniqueTypes) {
-      types.push(await fetchBalloonName(type));
-    }
-
-    const filledData: HistoryNode[] = [];
-    for (
-      let currentDate = new Date(startDate);
-      currentDate <= endDate;
-      currentDate.setDate(currentDate.getDate() + 1)
-    ) {
-      // Get the data in history with the same day as currentDate
-      const currentData = history.filter((node) => {
-        const date = node._id.getTimestamp();
-        return (
-          date.getDate() === currentDate.getDate() &&
-          date.getMonth() === currentDate.getMonth() &&
-          date.getFullYear() === currentDate.getFullYear()
-        );
-      });
-
-      const fill: { [key: string]: number } = {};
-      for (const node of currentData) {
-        const balloonName = types[uniqueTypes.indexOf(node.type.toString())];
-        fill[balloonName] = fill[balloonName] ? fill[balloonName] + 1 : 1;
-      }
-
-      filledData.push({
-        date: new Date(currentDate),
-        pops: fill,
-      });
-    }
-
-    res.json({
-      history: filledData,
-    });
+    res.json(await fetchHistory(startDate, endDate, id));
   },
 );
 
