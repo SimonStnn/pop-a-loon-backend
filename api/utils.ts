@@ -532,6 +532,7 @@ const randomBetween = (min: number, max: number) =>
  */
 export const getOrCreateSpawnSchedule = async (
   userId: string,
+  spawnRate = 1,
 ): Promise<SpawnTokenDocument> => {
   const now = Date.now();
 
@@ -547,7 +548,12 @@ export const getOrCreateSpawnSchedule = async (
 
   const balloon = await selectBalloonType();
   const { min, max } = getSpawnInterval();
-  const spawnAt = now + randomBetween(min, max);
+  // The user's spawnRate slider can only slow things down; the route clamps it
+  // to [0.1, 1] so it can never be used to obtain balloons faster than the
+  // server's configured interval.
+  const spawnAt =
+    now +
+    randomBetween(Math.round(min / spawnRate), Math.round(max / spawnRate));
   const expiresAt = spawnAt + SPAWN_TOKEN_TTL_MS;
   const nonce = crypto.randomUUID();
 

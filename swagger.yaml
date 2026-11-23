@@ -229,6 +229,19 @@ paths:
       tags: [Config]
       security:
         - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: spawn-rate
+          required: false
+          description: >-
+            The user's spawn-rate slider (0.1-1). Values outside the range are
+            clamped, so this can only slow spawning down. Applies to the next
+            schedule if one is already active.
+          schema:
+            type: number
+            minimum: 0.1
+            maximum: 1
+            default: 1
       responses:
         200:
           description: The spawn token
