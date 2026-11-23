@@ -14,6 +14,7 @@ export type ResponseSchema = {
     id: string;
     username?: string;
     email?: string;
+    hasRecoveryCode?: boolean;
     count: number;
     updatedAt: Date;
     createdAt: Date;

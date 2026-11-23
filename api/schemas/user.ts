@@ -6,6 +6,8 @@ export const name = 'users';
 export type User = {
   username?: string;
   email?: string;
+  recoveryHash?: string;
+  recoveryCreatedAt?: Date;
   updatedAt: Date;
 };
 
@@ -15,6 +17,14 @@ export const schema = new mongoose.Schema({
   },
   email: {
     type: String,
+  },
+  recoveryHash: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  recoveryCreatedAt: {
+    type: Date,
   },
   updatedAt: {
     type: Date,
