@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { getSpawnInterval } from '../utils';
 
 const router = express.Router();
 
@@ -8,10 +9,7 @@ router.get('/', async (req: Request, res: Response) => {
       color: '#26282b',
       backgroundColor: '#7aa5eb',
     },
-    spawnInterval: {
-      min: 1000,
-      max: 10 * 60000,
-    },
+    spawnInterval: getSpawnInterval(),
   });
 });
 

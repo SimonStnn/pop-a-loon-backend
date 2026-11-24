@@ -14,7 +14,16 @@ import Balloon, {
   BalloonDocument,
 } from './schemas/balloon';
 import CountHistory from './schemas/counthistory';
-import { JWTSignature, MongooseDocumentType, ResponseSchema } from './const';
+import {
+  HistoryBucket,
+  HistoryNode,
+  HistoryResponse,
+  JWTSignature,
+  MongooseDocumentType,
+  ResponseSchema,
+  SpawnTokenPayload,
+} from './const';
+import SpawnToken, { SpawnTokenDocument } from './schemas/spawn-token';
 
 type LeaderboardUser = MongooseDocumentType<{
   count: number;
@@ -44,6 +53,11 @@ export const validateEnv = () => {
     console.error('No token expiration provided');
     process.exit(1);
   }
+
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    console.error('JWT_SECRET must be at least 32 characters');
+    process.exit(1);
+  }
 };
 
 export const testOrigin = (origin: string) => {
@@ -65,7 +79,10 @@ export const validation = {
 };
 
 export const generateToken = (id: string): string => {
-  return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!);
+  return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!, {
+    algorithm: 'HS256',
+    expiresIn: process.env.JWT_EXPIRATION || '30d',
+  });
 };
 
 // Crockford base32 avoids ambiguous characters, so a code printed in the
@@ -417,59 +434,160 @@ export const fetchTotalPopped = async (): Promise<number> => {
 };
 
 export const fetchBalloonType = async (
-  name: string,
+  nameOrId: string,
 ): Promise<BalloonDocument> => {
-  const cacheKey = `${balloonCollection}-${name}`;
+  const cacheKey = `${balloonCollection}-${nameOrId}`;
 
-  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
+  // Cache a plain object, not the Mongoose document — node-cache clones on
+  // set, and cloning a document with nested subdocuments (e.g. season) crashes.
+  const cachedBalloon: Record<string, unknown> | undefined =
+    cache.get(cacheKey);
   if (cachedBalloon) {
-    return cachedBalloon;
+    return Balloon.hydrate(cachedBalloon) as BalloonDocument;
   }
 
-  const balloon: BalloonDocument | null = await Balloon.findOne({ name });
+  // Accept either a balloon name or an ObjectId
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(nameOrId);
+  const balloon: BalloonDocument | null = isObjectId
+    ? await Balloon.findById(nameOrId)
+    : await Balloon.findOne({ name: nameOrId });
+
   if (!balloon) {
     throw new Error('Balloon not found');
   }
 
-  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
+  cache.set(cacheKey, balloon.toObject(), 60 * 60); // cache for 1 hour
 
   return balloon;
 };
 
-export const fetchBalloonName = async (id: string): Promise<string> => {
-  const cacheKey = `${balloonCollection}-${id}`;
-  const cachedBalloon: BalloonDocument | undefined = cache.get(cacheKey);
-  if (cachedBalloon) {
-    return cachedBalloon.name;
-  }
+const historyBucket = (startDate: Date, endDate: Date): HistoryBucket => {
+  const days = (endDate.getTime() - startDate.getTime()) / 86400000;
+  if (days <= 31) return 'day';
+  if (days <= 365) return 'week';
+  return 'month';
+};
 
-  const balloon = await Balloon.findById(id);
-  if (!balloon) {
-    throw new Error('Balloon not found');
+const bucketStart = (date: Date, bucket: HistoryBucket): Date => {
+  const result = new Date(date);
+  result.setUTCHours(0, 0, 0, 0);
+  if (bucket === 'month') {
+    result.setUTCDate(1);
+  } else if (bucket === 'week') {
+    // Match $dateTrunc's default Sunday-based weeks.
+    result.setUTCDate(result.getUTCDate() - result.getUTCDay());
   }
+  return result;
+};
 
-  cache.set(cacheKey, balloon, 60 * 60); // cache for 1 hour
-  return balloon.name;
+const nextBucketStart = (date: Date, bucket: HistoryBucket): Date => {
+  const result = new Date(date);
+  if (bucket === 'month') {
+    result.setUTCMonth(result.getUTCMonth() + 1);
+  } else {
+    result.setUTCDate(result.getUTCDate() + (bucket === 'week' ? 7 : 1));
+  }
+  return result;
 };
 
 export const fetchHistory = async (
   startDate: Date,
   endDate: Date,
   id?: string,
-) => {
+): Promise<HistoryResponse> => {
+  const bucket = historyBucket(startDate, endDate);
+  const firstBucket = bucketStart(startDate, bucket);
+  const afterLastBucket = nextBucketStart(bucketStart(endDate, bucket), bucket);
+
   // Convert startDate and endDate to their equivalent ObjectId representations
   const startObjectId =
     Math.floor(startDate.getTime() / 1000).toString(16) + '0000000000000000';
   const endObjectId =
     Math.floor(endDate.getTime() / 1000).toString(16) + 'ffffffffffffffff';
 
-  return await CountHistory.find({
-    _id: {
-      $gte: startObjectId,
-      $lte: endObjectId,
+  // $dateTrunc and $densify require MongoDB 5.0/5.1 respectively.
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        _id: {
+          $gte: new mongoose.Types.ObjectId(startObjectId),
+          $lte: new mongoose.Types.ObjectId(endObjectId),
+        },
+        ...(id ? { user: new mongoose.Types.ObjectId(id) } : {}),
+      },
     },
-    ...(id ? { user: id } : {}),
-  }).exec();
+    {
+      $group: {
+        _id: {
+          date: {
+            $dateTrunc: { date: { $toDate: '$_id' }, unit: bucket },
+          },
+          type: '$type',
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: balloonCollection,
+        localField: '_id.type',
+        foreignField: '_id',
+        as: 'balloon',
+      },
+    },
+    { $unwind: '$balloon' },
+    {
+      $group: {
+        _id: '$_id.date',
+        pops: {
+          $push: { k: '$balloon.name', v: '$count' },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: '$_id',
+        pops: { $arrayToObject: '$pops' },
+      },
+    },
+    {
+      $densify: {
+        field: 'date',
+        range: {
+          step: 1,
+          unit: bucket,
+          // $densify's upper bound is exclusive.
+          bounds: [firstBucket, afterLastBucket],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: 1,
+        pops: { $ifNull: ['$pops', {}] },
+      },
+    },
+    { $sort: { date: 1 } },
+  ];
+
+  const history = await CountHistory.aggregate<HistoryNode>(pipeline).exec();
+
+  if (history.length > 0) {
+    return { history, bucket };
+  }
+
+  // No pop matched, so there is nothing for $densify to fill.
+  const emptyHistory: HistoryNode[] = [];
+  for (
+    let date = firstBucket;
+    date < afterLastBucket;
+    date = nextBucketStart(date, bucket)
+  ) {
+    emptyHistory.push({ date: new Date(date), pops: {} });
+  }
+  return { history: emptyHistory, bucket };
 };
 
 export const fetchScores = async (
@@ -515,4 +633,184 @@ export const fetchScores = async (
   ]).exec()) as { name: string; count: number }[];
 
   return scores;
+};
+
+// ─── Spawn Token Utilities ────────────────────────────────────────────────
+
+// How long a balloon stays poppable after its scheduled spawn time.
+const SPAWN_TOKEN_TTL_MS = 30 * 1000;
+
+/**
+ * The delay range between balloon spawns. The backend is the single source of
+ * truth for this so the schedule it hands out matches the published config.
+ */
+export const getSpawnInterval = (): { min: number; max: number } =>
+  process.env.NODE_ENV === 'development'
+    ? { min: 10 * 1000, max: 15 * 1000 }
+    : { min: 1000, max: 10 * 60000 };
+
+const randomBetween = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+/**
+ * Returns the user's active spawn schedule, creating one if none exists or the
+ * previous one expired.
+ *
+ * Idempotent: while a schedule is active, repeated calls return the same
+ * token and spawn time, so a client cannot obtain extra balloons by polling.
+ */
+export const getOrCreateSpawnSchedule = async (
+  userId: string,
+  spawnRate = 1,
+): Promise<SpawnTokenDocument> => {
+  const now = Date.now();
+
+  let schedule = await SpawnToken.findOne({ userId });
+
+  // The TTL monitor runs about once a minute, so replace expired rows here.
+  if (schedule && schedule.expiresAt.getTime() <= now) {
+    await SpawnToken.deleteOne({ _id: schedule._id });
+    schedule = null;
+  }
+
+  if (schedule) return schedule;
+
+  const balloon = await selectBalloonType();
+  const { min, max } = getSpawnInterval();
+  // The user's spawnRate slider can only slow things down; the route clamps it
+  // to [0.1, 1] so it can never be used to obtain balloons faster than the
+  // server's configured interval.
+  const spawnAt =
+    now +
+    randomBetween(Math.round(min / spawnRate), Math.round(max / spawnRate));
+  const expiresAt = spawnAt + SPAWN_TOKEN_TTL_MS;
+  const nonce = crypto.randomUUID();
+
+  const payload: SpawnTokenPayload = {
+    sub: userId,
+    type: 'spawn',
+    nonce,
+    spawnAt,
+  };
+  const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+    // nbf keeps the token unusable before the scheduled spawn time; exp ends
+    // the poppable window. jwt.verify enforces both.
+    notBefore: Math.max(0, Math.floor((spawnAt - now) / 1000)),
+    expiresIn: Math.ceil((expiresAt - now) / 1000),
+  });
+
+  try {
+    return await SpawnToken.create({
+      userId: new mongoose.Types.ObjectId(userId),
+      balloon: balloon._id,
+      balloonName: balloon.name,
+      nonce,
+      token,
+      spawnAt: new Date(spawnAt),
+      expiresAt: new Date(expiresAt),
+    });
+  } catch (e) {
+    // A concurrent request won the race; return the schedule it created.
+    const existing = await SpawnToken.findOne({ userId });
+    if (existing) return existing;
+    throw e;
+  }
+};
+
+export const verifySpawnToken = (token: string): Promise<SpawnTokenPayload> => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, process.env.JWT_SECRET!, (err, decoded) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(decoded as SpawnTokenPayload);
+    });
+  });
+};
+
+export const consumeSpawnToken = async (
+  token: string,
+  userId: string,
+): Promise<{ balloon: string }> => {
+  const payload = await verifySpawnToken(token);
+
+  if (payload.type !== 'spawn') {
+    throw new Error('Invalid token type');
+  }
+  if (payload.sub !== userId) {
+    throw new Error('Token does not belong to user');
+  }
+
+  // Atomically delete the schedule so the token can only be redeemed once.
+  // Deleting also frees the user's slot for the next schedule.
+  const result = await SpawnToken.findOneAndDelete({
+    userId: new mongoose.Types.ObjectId(userId),
+    nonce: payload.nonce,
+  });
+
+  if (!result) {
+    throw new Error('Spawn token already used or expired');
+  }
+
+  return { balloon: result.balloon.toString() };
+};
+
+type BalloonPlain = {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  value: number;
+  spawn_chance: number;
+  season?: {
+    start: { month: number; day: number };
+    end: { month: number; day: number };
+    timeZone?: string;
+  };
+};
+
+export const selectBalloonType = async (
+  now: Date = new Date(),
+): Promise<BalloonPlain> => {
+  const balloons = await Balloon.find({}).lean();
+  const eligible = balloons.filter((b) => {
+    if (!b.season) return true;
+    return isInSeason(b.season, now);
+  });
+
+  if (eligible.length === 0) {
+    // Fall back to all balloons if none are in season
+    return balloons[Math.floor(Math.random() * balloons.length)];
+  }
+
+  const totalWeight = eligible.reduce((sum, b) => sum + b.spawn_chance, 0);
+  let random = Math.random() * totalWeight;
+  for (const balloon of eligible) {
+    random -= balloon.spawn_chance;
+    if (random <= 0) return balloon;
+  }
+  return eligible[eligible.length - 1];
+};
+
+export const isInSeason = (
+  season: {
+    start: { month: number; day: number };
+    end: { month: number; day: number };
+    timeZone?: string;
+  },
+  date: Date = new Date(),
+): boolean => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: season.timeZone,
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+  const current = month * 100 + day;
+  const start = season.start.month * 100 + season.start.day;
+  const end = season.end.month * 100 + season.end.day;
+
+  return start <= end
+    ? current >= start && current <= end
+    : current >= start || current <= end;
 };

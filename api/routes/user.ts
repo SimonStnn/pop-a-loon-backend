@@ -12,6 +12,7 @@ import Count from '../schemas/count';
 import CountHistory from '../schemas/counthistory';
 import { ResponseSchema } from '../const';
 import {
+  consumeSpawnToken,
   fetchBalloonType,
   formatUser,
   generateRecoveryCode,
@@ -107,15 +108,12 @@ router.get(
 router.use('/count/increment', countLimiter);
 router.post(
   '/count/increment',
-  query('type')
+  body('spawnToken')
     .isString()
-    .customSanitizer(async (input: string, { req }) => {
-      const balloonType = await fetchBalloonType(input);
-      if (!balloonType) {
-        throw new Error('Invalid balloon type');
-      }
-      return balloonType;
-    }),
+    .withMessage('spawnToken is required')
+    .trim()
+    .notEmpty()
+    .withMessage('spawnToken is required'),
   async (req: Request, res: Response) => {
     const id = req.jwt!.id;
     const result = validationResult(req);
@@ -123,13 +121,22 @@ router.post(
       res.status(400).json({ error: result.array() });
       return;
     }
-    const { type } = matchedData(req);
+    const { spawnToken } = matchedData(req) as { spawnToken: string };
 
-    const countHistory = new CountHistory({
-      user: id,
-      type: type.id,
-    });
-    await countHistory.save();
+    try {
+      const { balloon } = await consumeSpawnToken(spawnToken, id);
+      const balloonDoc = await fetchBalloonType(balloon);
+      const countHistory = new CountHistory({
+        user: id,
+        type: balloonDoc._id,
+      });
+      await countHistory.save();
+    } catch (e) {
+      res.status(400).json({
+        error: e instanceof Error ? e.message : 'Invalid spawn token',
+      });
+      return;
+    }
 
     res.json({
       id: id,
