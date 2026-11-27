@@ -49,11 +49,6 @@ export const validateEnv = () => {
     process.exit(1);
   }
 
-  if (!process.env.JWT_EXPIRATION) {
-    console.error('No token expiration provided');
-    process.exit(1);
-  }
-
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
     console.error('JWT_SECRET must be at least 32 characters');
     process.exit(1);
@@ -79,9 +74,10 @@ export const validation = {
 };
 
 export const generateToken = (id: string): string => {
+  // There is no refresh flow, so an expiring auth token would force users
+  // through account recovery. Tokens stay valid until JWT_SECRET is rotated.
   return jwt.sign({ id } as JWTSignature, process.env.JWT_SECRET!, {
     algorithm: 'HS256',
-    expiresIn: process.env.JWT_EXPIRATION || '30d',
   });
 };
 
